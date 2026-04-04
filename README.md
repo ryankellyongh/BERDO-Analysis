@@ -82,21 +82,6 @@ The analysis was conducted using Python and follows a structured workflow:
 - Fossil fuel-based buildings remain common, indicating opportunities for electrification
 - Some neighborhoods show higher concentrations of non-submitted buildings, suggesting gaps in reporting or support
 
----
-
-## Project Structure
-
-BERDO-Compliance-Analysis/
-│── README.md
-│── data/
-│ └── 2025-reported-energy-and-water-metrics.xlsx
-│── notebooks/
-│ └── berdo_analysis.ipynb
-│── outputs/
-│ └── compliance_counts.csv
-│── images/
-
-
 
 ---
 
