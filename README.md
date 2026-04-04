@@ -1,9 +1,17 @@
 # BERDO Compliance Analysis
 
-## Overview
+## Introduction
 This project analyzes BERDO (Building Emissions Reduction and Disclosure Ordinance) data for Boston buildings using the 2025 reported energy and water metrics dataset.
 
-The goal of this analysis is to understand patterns in compliance, energy performance, and building characteristics to identify where gaps exist and where additional support may be needed.
+This analysis evaluates patterns in compliance, energy performance, and building characteristics to identify gaps and opportunities for targeted intervention.
+
+---
+
+## Key Insight
+
+Buildings with higher energy use intensity (EUI) tend to fall into more complex compliance pathways, indicating that energy-intensive buildings represent the greatest opportunity for targeted emissions reduction.
+
+Buildings under the state have an average site eui of 92 compared to 76 for compliant buildings.
 
 ---
 
@@ -51,37 +59,6 @@ The analysis was conducted using Python and follows a structured workflow:
 
 ---
 
-## Project Structure
-# BERDO Compliance Analysis
-
-## Overview
-This project analyzes BERDO (Building Emissions Reduction and Disclosure Ordinance) data for Boston buildings using the 2025 reported energy and water metrics dataset.
-
-The goal of this analysis is to understand patterns in compliance, energy performance, and building characteristics to identify where gaps exist and where additional support may be needed.
-
----
-
-## Data
-
-This project uses the:
-
-**2025 Reported Energy and Water Metrics (BERDO dataset)**
-
-Location:
-data/2025-reported-energy-and-water-metrics.xlsx
-
-The dataset contains building-level information including:
-- Compliance status (in compliance, not submitted, pending revisions)
-- Property type (office, multifamily, laboratory, etc.)
-- Energy Use Intensity (EUI)
-- Fuel classification (fossil vs electric/possibly clean)
-- Building size (square footage)
-- Neighborhood and location
-
-This data is used to evaluate how buildings are performing under BERDO requirements.
-
----
-
 ## Approach
 
 The analysis was conducted using Python and follows a structured workflow:
@@ -97,8 +74,10 @@ The analysis was conducted using Python and follows a structured workflow:
 
 ## Key Findings
 
-- Most buildings are in compliance, but a meaningful number remain not submitted or pending revisions
-- Multifamily and office buildings make up a large share of the dataset
+
+
+- 3,412 buildings are in compliance, compared to 150 pending revisions and 34 state pathways
+- Multifamily and office buildings make up a large share of the dataset, acounting for 2000 plus buildings.
 - Buildings with higher Energy Use Intensity (EUI) tend to face greater compliance challenges
 - Fossil fuel-based buildings remain common, indicating opportunities for electrification
 - Some neighborhoods show higher concentrations of non-submitted buildings, suggesting gaps in reporting or support
@@ -108,15 +87,15 @@ The analysis was conducted using Python and follows a structured workflow:
 ## Project Structure
 
 BERDO-Compliance-Analysis/
-README.md
-data/
-2025-reported-energy-and-water-metrics.xlsx
-notebooks/
-berdo_analysis.ipynb
-outputs/
-compliance_counts.csv
-images/
-(charts and visualizations)
+│── README.md
+│── data/
+│ └── 2025-reported-energy-and-water-metrics.xlsx
+│── notebooks/
+│ └── berdo_analysis.ipynb
+│── outputs/
+│ └── compliance_counts.csv
+│── images/
+
 
 
 ---
