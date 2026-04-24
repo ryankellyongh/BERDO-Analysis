@@ -20,14 +20,23 @@ City of Boston BERDO Public Reporting Data
 
 File Location:
 data/2025-reported-energy-and-water-metrics.xlsx
+
 Key Variables Analyzed
+
 • Compliance Status
+
 • Property Type
+
 • Site Energy Use Intensity (EUI)
+
 • Total Site Energy Usage
+
 • GHG Emissions
+
 • Gross Floor Area
+
 • Building Location
+
 • Ownership Type
 
 These variables help evaluate how buildings are performing under BERDO requirements and where intervention may be most effective.
@@ -35,23 +44,37 @@ These variables help evaluate how buildings are performing under BERDO requireme
 ##Methods
 The analysis was conducted using Python and followed a structured workflow:
 
-Data Preparation
+**Data Preparation**
+
 • Standardized column names
+
 • Renamed variables for clarity
+
 • Removed missing values in critical fields
+
 • Consolidated compliance labels
+
 • Cleaned reporting inconsistencies
 
-Analysis Performed
+
+**Analysis Performed**
+
 • Compliance distribution analysis
+
 • Property type frequency analysis
+
 • Average EUI by compliance status
+
 • High-priority building identification
+
 • Correlation analysis between building size and energy intensity
+
 • Missing data pattern analysis
 
-Key Findings
+**Key Findings**
+
 • 3,412 buildings are currently in compliance
+
 • 150 buildings remain in pending revisions
 • 34 buildings are under the State Pathway
 • Multifamily Housing represents the largest building category, with more than 2,000 buildings
@@ -59,25 +82,39 @@ Key Findings
 • Fossil fuel dependence remains common, indicating significant electrification opportunities
 • Some neighborhoods show higher concentrations of non-submitted buildings, suggesting reporting gaps and capacity barriers
 
-Why This Matters
+**Why This Matters**
+
 BERDO is one of Boston’s most important climate policies for reducing building emissions.
+
 Understanding compliance patterns helps answer:
 Which buildings need reporting support? vs. Which buildings need deeper retrofit planning?
 
 This helps stakeholders:
+
 • prioritize technical assistance
+
 • improve compliance rates
+
 • target financing programs
+
 • reduce emissions more effectively
+
 • support equitable decarbonization
 
 This project supports data-driven decision-making for climate policy and building performance strategy.
+
 Tools Used
+
 • Python
+
 • pandas
+
 • NumPy
+
 • matplotlib
+
 • Jupyter Notebook
+
 • Excel
 
 Author
