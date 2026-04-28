@@ -73,11 +73,11 @@ The analysis was conducted using Python and followed a structured workflow:
 
 ## Key Findings
 
-• 3,412 buildings are currently in compliance
+• 3,569 buildings are currently in compliance
 
-• 150 buildings remain in pending revisions
+• 223 buildings remain in pending revisions
 
-• 34 buildings are under the State Pathway
+• 116 buildings are under the State Pathway
 
 • Multifamily Housing represents the largest building category, with more than 2,000 buildings
 
