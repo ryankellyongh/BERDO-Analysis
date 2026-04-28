@@ -76,10 +76,15 @@ The analysis was conducted using Python and followed a structured workflow:
 • 3,412 buildings are currently in compliance
 
 • 150 buildings remain in pending revisions
+
 • 34 buildings are under the State Pathway
+
 • Multifamily Housing represents the largest building category, with more than 2,000 buildings
+
 • Buildings with higher EUI consistently face greater compliance challenges
+
 • Fossil fuel dependence remains common, indicating significant electrification opportunities
+
 • Some neighborhoods show higher concentrations of non-submitted buildings, suggesting reporting gaps and capacity barriers
 
 ## Why This Matters**
