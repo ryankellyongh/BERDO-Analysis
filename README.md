@@ -87,7 +87,7 @@ The analysis was conducted using Python and followed a structured workflow:
 
 • Some neighborhoods show higher concentrations of non-submitted buildings, suggesting reporting gaps and capacity barriers
 
-## Why This Matters**
+## Why This Matters
 
 BERDO is one of Boston’s most important climate policies for reducing building emissions.
 
