@@ -5,11 +5,10 @@ Identifying High-Impact Emissions Reduction Opportunities in Boston Buildings.
 ## Introduction
 Boston’s Building Emissions Reduction and Disclosure Ordinance (BERDO) requires large buildings to report energy use, emissions, and reduce operational carbon over time. This project analyzes Boston’s 2025 reported energy and water metrics dataset to evaluate compliance patterns, building performance, and opportunities for targeted intervention. The goal is not only to identify high-energy buildings, but to understand which buildings require reporting support versus deeper decarbonization planning.
 
-## Key Insight
+## Key Takeaway
 
-**Higher Energy Intensity Signals Greater Compliance Complexity**
+BERDO compliance is not only an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination issue. The buildings most in need of support are not limited to those with high Site EUI; they also include buildings missing basic reporting information, especially property type and energy use data. Considering missing data as an early warning signal can help identify where outreach, technical assistance, and retrofit planning should be prioritized.
 
-Buildings with higher Energy Use Intensity (EUI) are more likely to fall into complex compliance pathways. Buildings under the State Pathway show an average Site EUI of approximately 92, compared to approximately 76 for buildings already in compliance. This suggests that energy-intensive buildings represent the greatest opportunity for targeted emissions reduction and technical assistance.
 
 ## Dataset
 
@@ -96,15 +95,15 @@ Which buildings need reporting support? vs. Which buildings need deeper retrofit
 
 This helps stakeholders:
 
-• prioritize technical assistance
+• Prioritize technical assistance
 
-• improve compliance rates
+• Improve compliance rates
 
-• target financing programs
+• Target financing programs
 
-• reduce emissions more effectively
+• Reduce emissions more effectively
 
-• support equitable decarbonization
+• Support equitable decarbonization
 
 This project supports data-driven decision-making for climate policy and building performance strategy.
 
