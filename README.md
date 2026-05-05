@@ -5,6 +5,13 @@ Identifying Reporting Gaps, Energy Performance Risks, and Emissions Reduction Op
 ## Introduction
 Boston’s Building Emissions Reduction and Disclosure Ordinance (BERDO) requires large buildings to report energy use, emissions, and reduce operational carbon over time. This project analyzes Boston’s 2025 reported energy and water metrics dataset to evaluate compliance patterns, building performance, and opportunities for targeted intervention. The goal is not only to identify high-energy buildings, but to understand which buildings require reporting support versus deeper decarbonization planning.
 
+## Interactive Tool
+
+This project also includes a Streamlit-based BERDO Building Priority Calculator. The calculator allows a user to enter a Boston building address and receive a screening-based priority level for reporting support, outreach, or retrofit planning.
+
+The tool uses indicators such as compliance status, missing property type, missing Site EUI, building size, and energy performance flags to classify buildings as low, moderate, or high priority.
+
+
 ## Key Takeaway
 
 BERDO compliance is not only an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination issue. The buildings most in need of support are not limited to those with high Site EUI; they also include buildings missing basic reporting information, especially property type and energy use data. Considering missing data as an early warning signal can help identify where outreach, technical assistance, and retrofit planning should be prioritized.
@@ -22,21 +29,21 @@ data/2025-reported-energy-and-water-metrics.xlsx
 
 Key Variables Analyzed
 
-• Compliance Status
+- Compliance Status
 
-• Property Type
+- Property Type
 
-• Site Energy Use Intensity (EUI)
+- Site Energy Use Intensity (EUI)
 
-• Total Site Energy Usage
+- Total Site Energy Usage
 
-• GHG Emissions
+- GHG Emissions
 
-• Gross Floor Area
+- Gross Floor Area
 
-• Building Location
+- Building Location
 
-• Inferred Ownership Category
+- Inferred Ownership Category
 
 These variables help evaluate how buildings are performing under BERDO requirements and where intervention may be most effective.
 
@@ -45,15 +52,15 @@ The analysis was conducted using Python and followed a structured workflow:
 
 **Data Preparation**
 
-• Standardized column names
+- Standardized column names
 
-• Renamed variables for clarity
+- Renamed variables for clarity
 
-• Created separate datasets for complete performance records and missing-data analysis
+- Created separate datasets for complete performance records and missing-data analysis
 
-• Consolidated compliance labels
+- Consolidated compliance labels
 
-• Cleaned reporting inconsistencies
+- Cleaned reporting inconsistencies
 
 
 **Method Note**
@@ -63,33 +70,51 @@ Site EUI is used as a screening metric in this project. Official BERDO emissions
 
 **Analysis Performed**
 
-• Compliance distribution analysis
+- Compliance distribution analysis
 
-• Property type frequency analysis
+- Property type frequency analysis
 
-• Average EUI by compliance status
+- Average EUI by compliance status
 
-• High-priority building identification
+- High-priority building identification
 
-• Correlation analysis between building size and energy intensity
+- Correlation analysis between building size and energy intensity
 
-• Missing data pattern analysis
+- Missing data pattern analysis
+
+**Priority Calculator Method**
+
+The BERDO Building Priority Calculator uses a point-based screening system to estimate whether a building should be considered low, moderate, or high priority for outreach or planning.
+
+| Indicator | Reason |
+|---|---|
+| Not submitted status | Suggests the building may need reporting support |
+| Missing property type | Limits building classification and comparison |
+| Missing Site EUI | Prevents basic energy performance screening |
+| Above-median Site EUI | Suggests possible need for retrofit planning |
+| Large reported floor area | Indicates greater potential scale of impact |
+
+| Score Range | Priority Level |
+|---|---|
+| 0–2 | Low |
+| 3–5 | Moderate |
+| 6+ | High |
 
 ## Key Findings
 
-• 3,569 buildings are listed as “In Compliance” in the reporting status field
+- 3,569 buildings are listed as “In Compliance” in the reporting status field
 
-• 223 buildings remain in pending revisions
+- 223 buildings remain in pending revisions
 
-• 116 buildings are under the State Pathway
+- 116 buildings are under the State Pathway
 
-• Multifamily Housing represents the largest building category, with more than 2,000 buildings
+- Multifamily Housing represents the largest building category, with more than 2,000 buildings
 
-• Buildings with higher Site EUI may require deeper performance review, while buildings with missing data may require reporting support
+- Buildings with higher Site EUI may require deeper performance review, while buildings with missing data may require reporting support
 
-• Natural gas usage appears across many submitted records, suggesting potential opportunities for electrification planning
+- Natural gas usage appears across many submitted records, suggesting potential opportunities for electrification planning
 
-• Preliminary location patterns suggest that some areas may have higher concentrations of non-submitted buildings, which may point to reporting gaps and capacity barriers
+- Preliminary location patterns suggest that some areas may have higher concentrations of non-submitted buildings, which may point to reporting gaps and capacity barriers
 
 ## Why This Matters
 
@@ -100,31 +125,35 @@ Which buildings need reporting support? vs. Which buildings need deeper retrofit
 
 This helps stakeholders:
 
-• Prioritize technical assistance
+- Prioritize technical assistance
 
-• Improve compliance rates
+- Improve compliance rates
 
-• Target financing programs
+- Target financing programs
 
-• Reduce emissions more effectively
+- Reduce emissions more effectively
 
-• Support equitable decarbonization
+- Support equitable decarbonization
 
 This project supports data-driven decision-making for climate policy and building performance strategy.
 
 ## Tools Used
 
-• Python
+- Python
 
-• pandas
+- pandas
 
-• NumPy
+- NumPy
 
-• matplotlib
+- matplotlib
+ 
+- Streamlit
 
-• Jupyter Notebook
+- openpyxl
 
-• Excel
+- Jupyter Notebook
+
+- Excel
 
 ## How to Run
 
