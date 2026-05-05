@@ -1,8 +1,8 @@
-# Jupyter Notebook
+#Jupyter Notebook
 .ipynb_checkpoints/
 *.ipynb_checkpoints
  
-# Python
+ Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -10,15 +10,13 @@ __pycache__/
 venv/
 env/
 .venv/
+
+#data/
  
-# Data - uncomment if your xlsx is too large to commit
-# data/
- 
-# OS
+#OS
 .DS_Store
 Thumbs.db
  
-# IDE
+#IDE
 .vscode/
 .idea/
- 
