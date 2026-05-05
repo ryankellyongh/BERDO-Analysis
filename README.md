@@ -201,9 +201,10 @@ streamlit run app.py
 ```
 
 3. Enter building address in the search box
-   
+
+Example:
 ```
-Example: 1047 Commonwealth
+ 1047 Commonwealth
 ```
 
 The app will return the building’s priority level, score, and explanation.
