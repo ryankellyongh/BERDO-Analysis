@@ -122,6 +122,24 @@ This project supports data-driven decision-making for climate policy and buildin
 • Excel
 
 
+## How to Run
+
+1. Clone the repository
+bashgit clone https://github.com/ryankellyongh/berdo-energy-analysis.git
+cd berdo-energy-analysis
+
+3. Install dependencies
+bashpip install -r requirements.txt
+
+5. Download the data
+Download the 2025 Reported Energy and Water Metrics dataset from the City of Boston BERDO Public Reporting Data and save it to:
+data/2025-reported-energy-and-water-metrics.xlsx
+
+7. Run the notebook
+bashjupyter notebook analysis/berdo-analysis.ipynb
+Run all cells top to bottom. All outputs and visualizations will generate automatically.
+
+
 **Author**
 
 Ryan Kelly
