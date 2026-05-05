@@ -155,7 +155,7 @@ This project supports data-driven decision-making for climate policy and buildin
 
 - Excel
 
-## How to Run
+## How to Run the Analysis Notebook
 
 1. Clone the repository
 
@@ -186,8 +186,32 @@ jupyter notebook "analysis/BERDO Analysis.ipynb"
 
 Run all cells from top to bottom. All outputs and visualizations will generate automatically.
 
+## How to Run the Streamlit Calculator
 
-**Author**
+1. Make sure the required packages are installed.
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Run the Streamlit app
+
+```
+streamlit run app.py
+```
+
+3. Enter building address in the search box
+   
+```
+Example: 1047 Commonwealth
+```
+
+The app will return the building’s priority level, score, and explanation.
+
+Important Note The BERDO Building Priority Calculator is a screening tool for analysis purposes. It is not an official City of Boston BERDO compliance determination.
+
+
+## Author
 
 Ryan Kelly
 
