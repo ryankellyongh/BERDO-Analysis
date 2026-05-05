@@ -1,6 +1,6 @@
 # BERDO Analysis
 
-Identifying High-Impact Emissions Reduction Opportunities in Boston Buildings.
+Identifying Reporting Gaps, Energy Performance Risks, and Emissions Reduction Opportunities in Boston Buildings
 
 ## Introduction
 Boston’s Building Emissions Reduction and Disclosure Ordinance (BERDO) requires large buildings to report energy use, emissions, and reduce operational carbon over time. This project analyzes Boston’s 2025 reported energy and water metrics dataset to evaluate compliance patterns, building performance, and opportunities for targeted intervention. The goal is not only to identify high-energy buildings, but to understand which buildings require reporting support versus deeper decarbonization planning.
@@ -36,7 +36,7 @@ Key Variables Analyzed
 
 • Building Location
 
-• Ownership Type
+• Inferred Ownership Category
 
 These variables help evaluate how buildings are performing under BERDO requirements and where intervention may be most effective.
 
@@ -49,11 +49,16 @@ The analysis was conducted using Python and followed a structured workflow:
 
 • Renamed variables for clarity
 
-• Removed missing values in critical fields
+• Created separate datasets for complete performance records and missing-data analysis
 
 • Consolidated compliance labels
 
 • Cleaned reporting inconsistencies
+
+
+**Method Note**
+
+Site EUI is used as a screening metric in this project. Official BERDO emissions compliance is based on greenhouse gas emissions intensity, not Site EUI alone.
 
 
 **Analysis Performed**
@@ -72,7 +77,7 @@ The analysis was conducted using Python and followed a structured workflow:
 
 ## Key Findings
 
-• 3,569 buildings are currently in compliance
+• 3,569 buildings are listed as “In Compliance” in the reporting status field
 
 • 223 buildings remain in pending revisions
 
@@ -80,11 +85,11 @@ The analysis was conducted using Python and followed a structured workflow:
 
 • Multifamily Housing represents the largest building category, with more than 2,000 buildings
 
-• Buildings with higher EUI consistently face greater compliance challenges
+• Buildings with higher Site EUI may require deeper performance review, while buildings with missing data may require reporting support
 
-• Fossil fuel dependence remains common, indicating significant electrification opportunities
+• Natural gas usage appears across many submitted records, suggesting potential opportunities for electrification planning
 
-• Some neighborhoods show higher concentrations of non-submitted buildings, suggesting reporting gaps and capacity barriers
+• Preliminary location patterns suggest that some areas may have higher concentrations of non-submitted buildings, which may point to reporting gaps and capacity barriers
 
 ## Why This Matters
 
@@ -147,10 +152,11 @@ data/2025-reported-energy-and-water-metrics.xlsx
 4. Run the notebook
 
 ```bash
-jupyter notebook analysis/berdo-analysis.ipynb
+jupyter notebook "analysis/BERDO Analysis.ipynb"
 ```
 
 Run all cells from top to bottom. All outputs and visualizations will generate automatically.
+
 
 **Author**
 
