@@ -3,13 +3,14 @@
 Identifying Reporting Gaps, Energy Performance Risks, and Emissions Reduction Opportunities in Boston Buildings
 
 ## Introduction
+
 Boston’s Building Emissions Reduction and Disclosure Ordinance (BERDO) requires large buildings to report energy use, emissions, and reduce operational carbon over time. This project analyzes Boston’s 2025 reported energy and water metrics dataset to evaluate compliance patterns, building performance, and opportunities for targeted intervention. The goal is not only to identify high-energy buildings, but to understand which buildings require reporting support versus deeper decarbonization planning.
 
 ## Interactive Tool
 
 This project also includes a Streamlit-based BERDO Building Priority Screening Tool. The calculator allows a user to enter a Boston building address and receive a screening-based priority level for reporting support, outreach, or retrofit planning.
 
-The tool uses indicators such as compliance status, missing property type, missing Site EUI, building size, and energy performance flags to classify buildings as low, moderate, or high priority.
+The tool uses indicators such as compliance status, missing property type, missing Site EUI, building size, and energy performance flags to classify buildings as low, moderate, or high priority. The tool also displays greenhouse gas emissions intensity to provide BERDO-relevant emissions context.
 
 
 ## Key Takeaway
@@ -186,7 +187,7 @@ jupyter notebook "analysis/BERDO Analysis.ipynb"
 
 Run all cells from top to bottom. All outputs and visualizations will generate automatically.
 
-## How to Run the Streamlit Calculator
+## How to Run the BERDO Building Priority Screening Tool
 
 1. Make sure the required packages are installed.
 
@@ -197,7 +198,7 @@ pip install -r requirements.txt
 2. Run the Streamlit app
 
 ```
-streamlit run app.py
+streamlit run app/app.py
 ```
 
 3. Enter building address in the search box
@@ -209,7 +210,7 @@ Example:
 
 The app will return the building’s priority level, score, and explanation.
 
-Important Note The BERDO Building Priority Calculator is a screening tool for analysis purposes. It is not an official City of Boston BERDO compliance determination.
+**Important Note:** The BERDO Building Priority Screening Tool is for analytical screening purposes only. It is not an official City of Boston BERDO compliance determination.
 
 
 ## Author
