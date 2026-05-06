@@ -12,7 +12,7 @@ This project also includes a Streamlit-based BERDO Building Priority Screening T
 
 The tool uses indicators such as compliance status, missing property type, missing Site EUI, building size, and energy performance flags to classify buildings as low, moderate, or high priority. The tool also displays greenhouse gas emissions intensity to provide BERDO-relevant emissions context.
 
-![BERDO Building Priority Screening Tool](images/berdo-streamlit-app.png)
+![images/BERDO Building Priority Screening Tool.jpg]
 
 
 ## Key Takeaway
