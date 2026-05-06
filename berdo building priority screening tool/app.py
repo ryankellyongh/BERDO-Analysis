@@ -173,9 +173,11 @@ if address_input:
         st.warning("No matching address found in the dataset.")
     else:
         result["Site EUI"] = result["Site EUI"].round(1)
-        result["GHG Intensity (kgCO2e/sqft)"] = (
-            result["GHG Intensity (kgCO2e/sqft)"].astype("float").round(3)
-        )
+
+        result["GHG Intensity (kgCO2e/sqft)"] = pd.to_numeric(
+            result["GHG Intensity (kgCO2e/sqft)"],
+            errors="coerce"
+        ).round(3)
 
         st.subheader("Priority Result")
         st.dataframe(result, use_container_width=True)
