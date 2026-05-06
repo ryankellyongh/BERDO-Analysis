@@ -7,7 +7,7 @@ Boston’s Building Emissions Reduction and Disclosure Ordinance (BERDO) require
 
 ## Interactive Tool
 
-This project also includes a Streamlit-based BERDO Building Priority Calculator. The calculator allows a user to enter a Boston building address and receive a screening-based priority level for reporting support, outreach, or retrofit planning.
+This project also includes a Streamlit-based BERDO Building Priority Screening Tool. The calculator allows a user to enter a Boston building address and receive a screening-based priority level for reporting support, outreach, or retrofit planning.
 
 The tool uses indicators such as compliance status, missing property type, missing Site EUI, building size, and energy performance flags to classify buildings as low, moderate, or high priority.
 
