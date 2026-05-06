@@ -9,6 +9,7 @@ st.set_page_config(
 )
 
 #Load dataset
+#Load dataset
 @st.cache_data
 def load_data():
     file_path = Path("data") / "2025-reported-energy-and-water-metrics.xlsx"
@@ -22,15 +23,31 @@ def load_data():
 
     df = pd.read_excel(file_path, header=0)
 
+    #Clean column names
+    df.columns = df.columns.astype(str).str.strip()
+
+    #Rename dataset columns into simpler app-friendly names
+    column_rename_map = {
+        "Largest Property Type": "property_type",
+        "Reported Gross Floor Area (Sq Ft)": "gross_floor_area",
+        "Site EUI (Energy Use Intensity kBtu/ft²)": "site_eui",
+        "Estimated Total GHG Emissions (kgCO2e)": "ghg_emissions",
+        "Estimated Total GHG Emissions e(kgCO2e)": "ghg_emissions",
+        "Reporting Compliance Status": "compliance_status",
+        "First Emissions Compliance Year (Projected)": "compliance_year"
+    }
+
+    df = df.rename(columns=column_rename_map)
+
     required_columns = [
         "Building Address",
         "Property Owner Name",
-        "Largest Property Type",
-        "Reported Gross Floor Area (Sq Ft)",
-        "Site EUI (Energy Use Intensity kBtu/ft²)",
-        "Estimated Total GHG Emissions (kgCO2e)",
-        "Reporting Compliance Status",
-        "First Emissions Compliance Year (Projected)"
+        "property_type",
+        "gross_floor_area",
+        "site_eui",
+        "ghg_emissions",
+        "compliance_status",
+        "compliance_year"
     ]
 
     missing_columns = [
@@ -41,16 +58,16 @@ def load_data():
     if missing_columns:
         st.error("Missing required columns in the dataset:")
         st.write(missing_columns)
+
+        #Show available columns to help debug future column name mismatches
+        st.write("Available columns in dataset:")
+        st.write(list(df.columns))
+
         st.stop()
 
-    df = df.rename(columns={
-        "Largest Property Type": "property_type",
-        "Reported Gross Floor Area (Sq Ft)": "gross_floor_area",
-        "Site EUI (Energy Use Intensity kBtu/ft²)": "site_eui",
-        "Estimated Total GHG Emissions (kgCO2e)": "ghg_emissions",
-        "Reporting Compliance Status": "compliance_status",
-        "First Emissions Compliance Year (Projected)": "compliance_year"
-    })
+    df["gross_floor_area"] = pd.to_numeric(df["gross_floor_area"], errors="coerce")
+    df["site_eui"] = pd.to_numeric(df["site_eui"], errors="coerce")
+    df["ghg_emissions"] = pd.to_numeric(df["ghg_emissions"], errors="coerce")
 
     df["ghg_intensity_kgco2e_sqft"] = pd.NA
 
