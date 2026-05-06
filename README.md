@@ -198,7 +198,7 @@ pip install -r requirements.txt
 2. Run the Streamlit app
 
 ```
-streamlit run app/app.py
+streamlit run "berdo building priority screening tool/app.py"
 ```
 
 3. Enter building address in the search box
