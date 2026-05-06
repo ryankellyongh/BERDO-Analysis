@@ -197,10 +197,11 @@ Run all cells from top to bottom. All outputs and visualizations will generate a
 pip install -r requirements.txt
 ```
 
-2. Run the Streamlit app
+2. Navigate to the project folder and run the Streamlit app.
 
 ```
-streamlit run "berdo building priority screening tool/app.py"
+cd "BERDO Analysis"
+streamlit run app.py
 ```
 
 3. Enter building address in the search box
