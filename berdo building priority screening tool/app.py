@@ -9,7 +9,6 @@ st.set_page_config(
 )
 
 #Load dataset
-#Load dataset
 @st.cache_data
 def load_data():
     file_path = Path("data") / "2025-reported-energy-and-water-metrics.xlsx"
