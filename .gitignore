@@ -1,0 +1,22 @@
+#Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+ 
+ Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+env/
+.venv/
+
+#data/
+ 
+#OS
+.DS_Store
+Thumbs.db
+ 
+#IDE
+.vscode/
+.idea/
