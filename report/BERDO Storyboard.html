@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BERDO Compliance Analysis — Storyboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #071510;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px 60px;
+    min-height: 100vh;
+  }
+
+  .storyboard {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+
+  .panel { padding: 32px 36px; position: relative; overflow: hidden; }
+
+  .panel-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .light-num { color: rgba(255,255,255,0.3); }
+  .dark-num  { color: rgba(0,0,0,0.28); }
+
+  .kicker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  h1.display {
+    font-family: 'DM Serif Display', serif;
+    font-size: 38px;
+    line-height: 1.15;
+    font-weight: 400;
+  }
+  h2.section {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+  .body { font-size: 14px; line-height: 1.75; }
+
+  .divider { width: 100%; height: 1px; }
+  .divider-dark  { background: rgba(0,0,0,0.10); }
+  .divider-light { background: rgba(255,255,255,0.10); }
+
+  /* ── PANEL 0 — Hero ── */
+  .p0 { background: #0F2E23; }
+  .p0 .panel-num, .p0 .body { color: rgba(232,245,237,0.55); }
+  .p0 h1 { color: #E8F5ED; }
+  .p0 .kicker { color: #5DCAA5; }
+  .badge {
+    display: inline-block;
+    background: #1D9E75;
+    color: #E1F5EE;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* ── PANEL 1 — Context ── */
+  .p1 { background: #1B3F30; }
+  .p1 .panel-num { color: rgba(255,255,255,0.3); }
+  .p1 h2 { color: #E8F5ED; }
+  .p1 .body { color: rgba(232,245,237,0.65); }
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .stat-card {
+    background: rgba(29,158,117,0.14);
+    border: 0.5px solid rgba(93,202,165,0.22);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-big {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    color: #5DCAA5;
+    line-height: 1;
+  }
+  .stat-label { font-size: 12px; color: rgba(232,245,237,0.5); margin-top: 6px; line-height: 1.4; }
+
+  /* ── PANEL 2 — Key Insight ── */
+  .p2 { background: #E8F5ED; }
+  .p2 .panel-num { color: rgba(0,0,0,0.28); }
+  .p2 .kicker { color: #0F6E56; }
+  .p2 h2 { color: #0F2E23; }
+  .p2 .body { color: #3B6D11; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .insight-box { border-radius: 10px; padding: 22px; }
+  .box-a { background: #0F2E23; }
+  .box-b { background: #F0FBF5; border: 0.5px solid #9FE1CB; }
+  .box-tag {
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .box-a .box-tag { color: rgba(232,245,237,0.35); }
+  .box-b .box-tag { color: rgba(15,110,86,0.45); }
+  .big-pct {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px; line-height: 1; margin-bottom: 4px;
+  }
+  .box-a .big-pct { color: #5DCAA5; }
+  .box-b .big-pct { color: #1D9E75; }
+  .box-desc { font-size: 13px; margin-bottom: 0; line-height: 1; }
+  .box-a .box-desc { color: rgba(232,245,237,0.8); }
+  .box-b .box-desc { color: #0F6E56; }
+  .box-sub { font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .box-a .box-sub { color: rgba(232,245,237,0.45); }
+  .box-b .box-sub { color: rgba(15,46,35,0.5); }
+
+  /* ── PANEL 3 — Two Groups ── */
+  .p3 { background: #F7F4EE; }
+  .p3 .panel-num { color: rgba(0,0,0,0.28); }
+  .p3 .kicker { color: #0F6E56; }
+  .p3 h2 { color: #2C2C2A; }
+  .p3 .body { color: #444441; }
+  .groups { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+  .group-card { border-radius: 12px; padding: 22px; }
+  .g1 { background: #0F2E23; }
+  .g2 { background: #085041; }
+  .group-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px; color: #5DCAA5; line-height: 1; margin-bottom: 12px;
+  }
+  .group-title { font-size: 14px; font-weight: 600; color: #E8F5ED; margin-bottom: 8px; }
+  .group-body { font-size: 13px; color: rgba(232,245,237,0.6); line-height: 1.65; }
+  .tag {
+    display: inline-block;
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    padding: 4px 9px; border-radius: 4px; margin-top: 12px; letter-spacing: 0.5px;
+  }
+  .tag-green { background: rgba(93,202,165,0.18); color: #5DCAA5; }
+  .tag-amber { background: rgba(250,199,117,0.18); color: #FAC775; }
+
+  /* ── PANEL 4 — EUI Bars ── */
+  .p4 { background: #1B3F30; }
+  .p4 .panel-num { color: rgba(255,255,255,0.3); }
+  .p4 h2 { color: #E8F5ED; }
+  .p4 .body { color: rgba(232,245,237,0.58); }
+  .bar-section { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .bar-meta {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: rgba(232,245,237,0.55); margin-bottom: 5px;
+  }
+  .bar-meta .val { font-family: 'DM Mono', monospace; color: #5DCAA5; }
+  .bar-meta .val-low { font-family: 'DM Mono', monospace; color: rgba(232,245,237,0.32); }
+  .bar-track { height: 8px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  /* ── PANEL 5 — Priority Matrix ── */
+  .p5 { background: #F0F9F5; }
+  .p5 .panel-num { color: rgba(0,0,0,0.28); }
+  .p5 .kicker { color: #0F6E56; }
+  .p5 h2 { color: #0F2E23; }
+  .p5 .body { color: #0F6E56; }
+  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .m-card { border-radius: 10px; padding: 18px; }
+  .m-high { background: #0F2E23; }
+  .m-med  { background: rgba(93,202,165,0.13); border: 0.5px solid rgba(29,158,117,0.28); }
+  .m-low  { background: rgba(29,158,117,0.06); border: 0.5px solid rgba(29,158,117,0.13); }
+  .m-unk  { background: rgba(0,0,0,0.04); border: 0.5px solid rgba(0,0,0,0.09); }
+  .m-count { font-family: 'DM Serif Display', serif; font-size: 30px; line-height: 1; margin-bottom: 4px; }
+  .m-high .m-count { color: #5DCAA5; }
+  .m-med  .m-count { color: #0F6E56; }
+  .m-low  .m-count { color: #3B6D11; }
+  .m-unk  .m-count { color: #888780; }
+  .m-pct { font-size: 11px; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+  .m-high .m-pct { color: rgba(232,245,237,0.38); }
+  .m-med .m-pct, .m-low .m-pct { color: rgba(15,46,35,0.4); }
+  .m-unk .m-pct  { color: rgba(0,0,0,0.3); }
+  .m-title { font-size: 13px; font-weight: 500; }
+  .m-high .m-title { color: #E8F5ED; }
+  .m-med  .m-title, .m-low .m-title { color: #0F2E23; }
+  .m-unk  .m-title { color: #2C2C2A; }
+  .m-sub { font-size: 12px; margin-top: 4px; line-height: 1.45; }
+  .m-high .m-sub { color: rgba(232,245,237,0.48); }
+  .m-med .m-sub, .m-low .m-sub { color: rgba(15,46,35,0.5); }
+  .m-unk .m-sub  { color: rgba(0,0,0,0.38); }
+  .matrix-note {
+    font-size: 12px; color: #3B6D11; margin-top: 14px;
+    font-family: 'DM Mono', monospace; line-height: 1.5;
+  }
+
+  /* ── PANEL 6 — Conclusion ── */
+  .p6 { background: #0A1F17; }
+  .p6 .panel-num { color: rgba(255,255,255,0.25); }
+  .p6 .kicker { color: #5DCAA5; }
+  .p6 h2 { color: #E8F5ED; }
+  .takeaways { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; }
+  .takeaway { display: flex; gap: 14px; align-items: flex-start; }
+  .t-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(93,202,165,0.12); border: 0.5px solid rgba(93,202,165,0.28);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+  }
+  .t-num { font-family: 'DM Mono', monospace; font-size: 11px; color: #5DCAA5; }
+  .t-head { font-size: 14px; font-weight: 500; color: #E8F5ED; margin-bottom: 4px; }
+  .t-text { font-size: 13px; color: rgba(232,245,237,0.62); line-height: 1.65; }
+
+  /* ── FOOTER ── */
+  .p7 { background: #071510; padding: 18px 36px; }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .footer-tag {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: rgba(255,255,255,0.22); letter-spacing: 1.5px; text-transform: uppercase;
+  }
+
+  @media (max-width: 560px) {
+    .panel { padding: 24px 20px; }
+    .stat-row { grid-template-columns: 1fr; }
+    .split, .groups, .matrix { grid-template-columns: 1fr; }
+    h1.display { font-size: 28px; }
+    h2.section { font-size: 21px; }
+    .big-pct { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="storyboard">
+
+  <!-- 01 HERO -->
+  <div class="panel p0">
+    <div class="panel-num light-num">01 — Overview</div>
+    <div class="kicker">Boston BERDO · 2025 Dataset</div>
+    <h1 class="display" style="margin-bottom:14px">
+      Identifying High-Impact<br><em>Energy Reduction</em><br>Opportunities
+    </h1>
+    <p class="body" style="max-width:500px">
+      An analysis of 5,580 Boston buildings to identify who faces the greatest
+      compliance challenges — and where targeted intervention creates the highest impact.
+    </p>
+    <div class="badges">
+      <span class="badge">Python · Pandas</span>
+      <span class="badge">5,580 buildings</span>
+      <span class="badge">54 variables</span>
+    </div>
+  </div>
+
+  <div class="divider divider-light"></div>
+
+  <!-- 02 CONTEXT -->
+  <div class="panel p1">
+    <div class="panel-num light-num">02 — The Landscape</div>
+    <h2 class="section">What BERDO requires</h2>
+    <p class="body">
+      Boston's Building Emissions Reduction and Disclosure Ordinance mandates large
+      buildings to report emissions and reduce operational carbon over time.
+    </p>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-big">5,580</div>
+        <div class="stat-label">Buildings in 2025 dataset</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">3,569</div>
+        <div class="stat-label">In Compliance</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">1,579</div>
+        <div class="stat-label">Not Submitted</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider divider-light"></div>
+
+  <!-- 03 KEY INSIGHT -->
+  <div class="panel p2">
+    <div class="panel-num dark-num">03 — Key Insight</div>
+    <div class="kicker">Missing data as a signal</div>
+    <h2 class="section">Data gaps are not random —<br>they mark compliance risk</h2>
+    <p class="body" style="max-width:500px">
+      Property type is missing in a near-perfect pattern that maps directly onto compliance failure.
+    </p>
+    <div class="split">
+      <div class="insight-box box-a">
+        <div class="box-tag">Not Submitted</div>
+        <div class="big-pct">100%</div>
+        <div class="box-desc">missing property type</div>
+        <div class="box-sub">All 1,579 buildings that failed to submit are also missing core classification data.</div>
+      </div>
+      <div class="insight-box box-b">
+        <div class="box-tag">In Compliance</div>
+        <div class="big-pct">0%</div>
+        <div class="box-desc">missing property type</div>
+        <div class="box-sub">Of 3,569 compliant buildings, zero have missing property type. A perfect separation.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider divider-dark"></div>
+
+  <!-- 04 TWO GROUPS -->
+  <div class="panel p3">
+    <div class="panel-num dark-num">04 — Intervention Strategy</div>
+    <div class="kicker">Two distinct challenges</div>
+    <h2 class="section">Different buildings need<br>different solutions</h2>
+    <p class="body">The dataset reveals two non-overlapping intervention groups with fundamentally different needs.</p>
+    <div class="groups">
+      <div class="group-card g1">
+        <div class="group-num">G1</div>
+        <div class="group-title">Not Submitted</div>
+        <div class="group-body">Buildings that fail to report at all. Missing property type, fragmented ownership, limited technical capacity.</div>
+        <span class="tag tag-green">Outreach + Reporting Support</span>
+      </div>
+      <div class="group-card g2">
+        <div class="group-num">G2</div>
+        <div class="group-title">High EUI</div>
+        <div class="group-body">Buildings that report but consume significantly more energy than the median. Labs, industrial plants, institutional buildings.</div>
+        <span class="tag tag-amber">Retrofit + Energy Reduction</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider divider-dark"></div>
+
+  <!-- 05 EUI BARS -->
+  <div class="panel p4">
+    <div class="panel-num light-num">05 — Energy Intensity</div>
+    <h2 class="section">EUI varies dramatically<br>by building type</h2>
+    <p class="body">Laboratory and institutional buildings exhibit the highest energy use intensity, making them retrofit priorities.</p>
+    <div class="bar-section">
+      <div>
+        <div class="bar-meta"><span>Laboratory / R&D</span><span class="val">High EUI</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:92%;background:#1D9E75"></div></div>
+      </div>
+      <div>
+        <div class="bar-meta"><span>Industrial / Manufacturing</span><span class="val">667 peak</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:82%;background:#1D9E75"></div></div>
+      </div>
+      <div>
+        <div class="bar-meta"><span>Multifamily Housing</span><span class="val-low">Moderate</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:46%;background:#0F6E56"></div></div>
+      </div>
+      <div>
+        <div class="bar-meta"><span>Office Buildings</span><span class="val-low">Moderate</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:38%;background:#085041"></div></div>
+      </div>
+      <div>
+        <div class="bar-meta"><span>Self-Storage / Other</span><span class="val-low">Variable</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:24%;background:#04342C"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider divider-light"></div>
+
+  <!-- 06 PRIORITY MATRIX -->
+  <div class="panel p5">
+    <div class="panel-num dark-num">06 — Priority Matrix</div>
+    <div class="kicker">EUI × Implementation complexity</div>
+    <h2 class="section">1 in 4 buildings is high priority</h2>
+    <p class="body">Buildings with high EUI and high implementation complexity represent the toughest and most urgent retrofit targets.</p>
+    <div class="matrix">
+      <div class="m-card m-high">
+        <div class="m-count">1,003</div>
+        <div class="m-pct">27.27% of dataset</div>
+        <div class="m-title">High Priority</div>
+        <div class="m-sub">High EUI + High complexity ownership</div>
+      </div>
+      <div class="m-card m-med">
+        <div class="m-count">~820</div>
+        <div class="m-pct">est. share</div>
+        <div class="m-title">Medium Priority</div>
+        <div class="m-sub">High EUI + Moderate complexity</div>
+      </div>
+      <div class="m-card m-low">
+        <div class="m-count">3,678</div>
+        <div class="m-pct">total analyzed</div>
+        <div class="m-title">Low Priority</div>
+        <div class="m-sub">Below median EUI, low complexity</div>
+      </div>
+      <div class="m-card m-unk">
+        <div class="m-count">1,579</div>
+        <div class="m-pct">not in analysis</div>
+        <div class="m-title">Not Submitted</div>
+        <div class="m-sub">Missing data → Group 1 outreach</div>
+      </div>
+    </div>
+    <p class="matrix-note">
+      Note: 96.51% of High Priority buildings are currently "In Compliance" —<br>
+      compliance status ≠ low energy use.
+    </p>
+  </div>
+
+  <div class="divider divider-dark"></div>
+
+  <!-- 07 CONCLUSION -->
+  <div class="panel p6">
+    <div class="panel-num light-num">07 — Conclusion</div>
+    <div class="kicker">Policy recommendations</div>
+    <h2 class="section">Three paths to<br>meaningful emissions reductions</h2>
+    <div class="takeaways">
+      <div class="takeaway">
+        <div class="t-dot"><span class="t-num">01</span></div>
+        <div>
+          <div class="t-head">Expand technical assistance</div>
+          <div class="t-text">Target condominiums, LLCs, and public-sector owners that face fragmented ownership and limited engineering capacity.</div>
+        </div>
+      </div>
+      <div class="takeaway">
+        <div class="t-dot"><span class="t-num">02</span></div>
+        <div>
+          <div class="t-head">Simplify the reporting process</div>
+          <div class="t-text">Missing data is a structural problem, not random noise. Proactive intervention beats reactive enforcement.</div>
+        </div>
+      </div>
+      <div class="takeaway">
+        <div class="t-dot"><span class="t-num">03</span></div>
+        <div>
+          <div class="t-head">Prioritize retrofit for high-EUI buildings</div>
+          <div class="t-text">1,003 high-priority buildings combine intense energy use with complex ownership — these need deep decarbonization pathways, not just compliance paperwork.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="p7">
+    <div class="footer-row">
+      <span class="footer-tag">BERDO Compliance Analysis · Boston · 2025</span>
+      <span class="footer-tag">Python · Pandas · Matplotlib</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
