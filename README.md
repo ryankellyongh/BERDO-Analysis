@@ -120,6 +120,26 @@ The BERDO Building Priority Calculator uses a point-based screening system to es
 | 3–5 | Moderate |
 | 6+ | High |
 
+**How is the priority score calculated?**
+
+Each building is scored on four factors:
+
+Not submitted (3 points): The building did not report data to the City of Boston by the May 15 deadline.
+
+Missing property type (2 points): The building's use category is not recorded, which prevents accurate emissions benchmarking.
+
+Missing or above-median Site EUI (2 points): The building's energy use intensity is missing or higher than the dataset median, indicating potential inefficiency.
+
+Large floor area (1 point): Buildings over 100,000 sq ft have greater emissions impact.
+
+Scores of 6 or above are flagged as High priority. Scores of 3–5 are Moderate. Below 3 is Low.
+
+How is the compliance gap calculated?
+
+The tool compares each building's reported GHG intensity (kg CO₂e per square foot per year) against the BERDO 2.0 emissions limits for its property type. If the building exceeds the limit, the tool estimates the annual Alternative Compliance Payment (ACP) at $234 per excess metric ton of CO₂e.
+
+Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021). Not an official City of Boston compliance determination.
+
 ## Key Findings
 
 - 3,569 buildings are listed as “In Compliance” in the reporting status field
