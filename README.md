@@ -102,8 +102,6 @@ Site EUI is used as a screening metric in this project. Official BERDO emissions
 
 - Missing data pattern analysis
 
-Here's a revised version polished for a GitHub README:
-
 
 ## Priority Calculator Methodology
  
