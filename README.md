@@ -47,10 +47,10 @@ The new features include:
 
 The multi-year view activates automatically when more than one year file is present in the data folder. The single-year experience is unchanged if only one file is loaded.
 
+![Year Selector Sidebar](images/Year_selector.png)
 
-![BERDO Building Priority Screening Tool](images/BERDO%20Building%20Priority%20Screening%20Tool.png)
 
-!![BERDO Building Priority Screening Tool](images/Year_trend_section.png)
+![Year-over-Year Trend](images/Year_trend_section.png)
 
 
 ## Key Takeaway
