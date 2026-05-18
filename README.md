@@ -48,10 +48,7 @@ The new features include:
 The multi-year view activates automatically when more than one year file is present in the data folder. The single-year experience is unchanged if only one file is loaded.
 
 ![Year Selector Sidebar](images/Year_selector.png)
-
-
 ![Year-over-Year Trend](images/Year_trend_section.png)
-
 
 ## Key Takeaway
 
