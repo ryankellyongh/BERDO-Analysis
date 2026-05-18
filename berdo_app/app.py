@@ -603,6 +603,12 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
 
     st.plotly_chart(fig, use_container_width=True, key="yoy_trend_chart")
 
+    if 2022 in [r["year"] for r in records] and trend_df.loc[trend_df["year"] == 2022, "ghg_intensity"].isna().all():
+        st.caption(
+            "⚠️ 2022 GHG intensity is not shown — the City of Boston did not publish "
+            "GHG emissions totals in that year's dataset."
+        )
+
     prior_ghg   = prior["ghg_intensity"] if pd.notna(prior["ghg_intensity"]) else None
     prior_label = str(int(prior["year"]))
     return prior_ghg, prior_label
