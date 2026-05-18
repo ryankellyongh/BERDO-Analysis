@@ -543,9 +543,10 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
             delta_color="inverse",
         )
     with col3:
-        # Years with data count
-        n_years = trend_df["ghg_intensity"].notna().sum()
-        st.metric(label="Years of data found", value=int(n_years))
+        n_ghg = trend_df["ghg_intensity"].notna().sum()
+        n_eui = trend_df["site_eui"].notna().sum()
+        st.metric(label="Years of GHG data", value=int(n_ghg))
+        st.metric(label="Years of EUI data", value=int(n_eui))
 
     # --- Trend chart ---
     fig = go.Figure()
