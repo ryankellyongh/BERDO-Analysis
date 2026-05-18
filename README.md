@@ -32,6 +32,27 @@ Output:
 
 ![BERDO Building Priority Screening Tool](images/BERDO%20Building%20Priority%20Screening%20Tool.png)
 
+Update (05/18) - Multi-Year Comparison (2021–2025)
+
+I've added four years of historical BERDO data and a year-over-year comparison view to the screening tool.
+The new features include:
+
+- Four normalized CSVs covering 2021, 2022, 2023, 2024, and 2025 reporting years, converted and standardized from the City of Boston's annual public releases. Each year required different column mapping and unit handling — notably, 2021 GHG emissions were published in MTCO2e and converted to kgCO2e, and 2022 did not include a GHG emissions column.
+
+- A sidebar year selector that lets users switch between reporting years. Defaults to the most recent year, so existing behavior is unchanged.
+
+- A year-over-year trend section that appears when a building is found across multiple years. It shows GHG intensity and Site EUI delta metrics versus the prior year, and a dual-axis chart with intensity as a line and EUI as bars across all available years.
+
+- A prior-year intensity overlay on the compliance gap chart, shown as a dotted purple line alongside the current year, so users can see whether a building is moving toward or away from the tightening emissions limits.
+
+The multi-year view activates automatically when more than one year file is present in the data folder. The single-year experience is unchanged if only one file is loaded.
+
+
+![BERDO Building Priority Screening Tool](images/BERDO%20Building%20Priority%20Screening%20Tool.png)
+
+!![BERDO Building Priority Screening Tool](images/Year_trend_section.png)
+
+
 ## Key Takeaway
 
 BERDO compliance is not only an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination issue. The buildings most in need of support are not limited to those with high Site EUI; they also include buildings missing basic reporting information, especially property type and energy use data. Considering missing data as an early warning signal can help identify where outreach, technical assistance, and retrofit planning should be prioritized.
