@@ -527,7 +527,7 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
     ghg_delta  = latest["ghg_intensity"] - prior["ghg_intensity"]
     eui_delta  = latest["site_eui"]      - prior["site_eui"]
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric(
             label=f"GHG Intensity {int(latest['year'])} (kg CO₂e/sf/yr)",
@@ -544,8 +544,9 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
         )
     with col3:
         n_ghg = trend_df["ghg_intensity"].notna().sum()
-        n_eui = trend_df["site_eui"].notna().sum()
         st.metric(label="Years of GHG data", value=int(n_ghg))
+    with col4:
+        n_eui = trend_df["site_eui"].notna().sum()
         st.metric(label="Years of EUI data", value=int(n_eui))
 
     # --- Trend chart ---
