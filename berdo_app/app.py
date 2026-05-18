@@ -571,6 +571,7 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
 
     fig.update_layout(
         xaxis_title="Reporting year",
+        xaxis_type="category",
         yaxis=dict(title="GHG Intensity (kg CO₂e/sf/yr)", side="left"),
         yaxis2=dict(
             title="Site EUI (kBtu/sf/yr)",
