@@ -544,10 +544,20 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
         )
     with col3:
         n_ghg = trend_df["ghg_intensity"].notna().sum()
+        missing_ghg = trend_df.loc[trend_df["ghg_intensity"].isna(), "year"].astype(int).tolist()
         st.metric(label="Years of GHG data", value=int(n_ghg))
+        if missing_ghg:
+            st.caption(f"No data: {', '.join(str(y) for y in missing_ghg)}")
+        else:
+            st.caption("All years present")
     with col4:
         n_eui = trend_df["site_eui"].notna().sum()
+        missing_eui = trend_df.loc[trend_df["site_eui"].isna(), "year"].astype(int).tolist()
         st.metric(label="Years of EUI data", value=int(n_eui))
+        if missing_eui:
+            st.caption(f"No data: {', '.join(str(y) for y in missing_eui)}")
+        else:
+            st.caption("All years present")
 
     # --- Trend chart ---
     fig = go.Figure()
