@@ -145,7 +145,7 @@ def calculate_compliance_gap(ghg_intensity, sqft, berdo_category):
 # ---------------------------------------------------------------------------
 # Compliance gap display
 # ---------------------------------------------------------------------------
-def render_compliance_section(row):
+def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_label=None):
     ghg_intensity = row.get("GHG Intensity (kgCO2e/sqft)")
     sqft = row.get("Gross Floor Area")
     raw_type = row.get("Property Type")
@@ -233,6 +233,16 @@ def render_compliance_section(row):
         line=dict(color="#E24B4A", width=2, dash="dash"),
     ))
 
+    # Optional prior-year intensity overlay
+    if prior_year_ghg_intensity is not None and not pd.isna(prior_year_ghg_intensity):
+        fig.add_trace(go.Scatter(
+            x=COMPLIANCE_PERIODS,
+            y=[prior_year_ghg_intensity] * len(COMPLIANCE_PERIODS),
+            name=f"{prior_year_label} intensity",
+            mode="lines",
+            line=dict(color="#9B59B6", width=1.5, dash="dot"),
+        ))
+
     fig.add_trace(go.Scatter(
         x=COMPLIANCE_PERIODS,
         y=fines,
@@ -316,39 +326,35 @@ Not an official City of Boston compliance determination.
 
 
 # ---------------------------------------------------------------------------
-# Data loading
+# Data loading — supports single file (berdo.csv) or multi-year files
+# (berdo_2022.csv, berdo_2023.csv, …) in the data/ folder.
 # ---------------------------------------------------------------------------
+COLUMN_RENAME_MAP = {
+    "Largest Property Type": "property_type",
+    "Reported Gross Floor Area (Sq Ft)": "gross_floor_area",
+    "Site EUI (Energy Use Intensity kBtu/ft²)": "site_eui",
+    "Estimated Total GHG Emissions (kgCO2e)": "ghg_emissions",
+    "Estimated Total GHG Emissions e(kgCO2e)": "ghg_emissions",
+    "Reporting Compliance Status": "compliance_status",
+    "First Emissions Compliance Year (Projected)": "compliance_year",
+}
+
+REQUIRED_COLUMNS = [
+    "Building Address", "Property Owner Name", "property_type",
+    "gross_floor_area", "site_eui", "ghg_emissions",
+    "compliance_status", "compliance_year",
+]
+
+
 @st.cache_data
-def load_data():
-    file_path = Path(__file__).parent.parent / "data" / "berdo.csv"
-    if not file_path.exists():
-        st.error(
-            "Dataset not found. Make sure the CSV file is located at: "
-            "data/berdo.csv"
-        )
-        st.stop()
+def _load_single_csv(file_path: Path) -> pd.DataFrame:
     df = pd.read_csv(file_path)
     df.columns = df.columns.astype(str).str.strip()
+    df = df.rename(columns=COLUMN_RENAME_MAP)
 
-    column_rename_map = {
-        "Largest Property Type": "property_type",
-        "Reported Gross Floor Area (Sq Ft)": "gross_floor_area",
-        "Site EUI (Energy Use Intensity kBtu/ft²)": "site_eui",
-        "Estimated Total GHG Emissions (kgCO2e)": "ghg_emissions",
-        "Estimated Total GHG Emissions e(kgCO2e)": "ghg_emissions",
-        "Reporting Compliance Status": "compliance_status",
-        "First Emissions Compliance Year (Projected)": "compliance_year",
-    }
-    df = df.rename(columns=column_rename_map)
-
-    required_columns = [
-        "Building Address", "Property Owner Name", "property_type",
-        "gross_floor_area", "site_eui", "ghg_emissions",
-        "compliance_status", "compliance_year",
-    ]
-    missing = [c for c in required_columns if c not in df.columns]
+    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
-        st.error("Missing required columns in the dataset:")
+        st.error(f"Missing required columns in {file_path.name}:")
         st.write(missing)
         st.write("Available columns:", list(df.columns))
         st.stop()
@@ -371,6 +377,42 @@ def load_data():
         df["compliance_status"].astype(str).str.lower().str.strip()
     )
     return df
+
+
+@st.cache_data
+def load_all_years() -> dict[int, pd.DataFrame]:
+    """
+    Returns a dict mapping year (int) → DataFrame.
+
+    Discovery rules (in priority order):
+      1. berdo_<year>.csv files  →  multi-year mode
+      2. berdo.csv               →  single-year fallback (keyed as year 0)
+    """
+    data_dir = Path("data")
+    year_files = sorted(data_dir.glob("berdo_*.csv"))
+
+    year_map: dict[int, pd.DataFrame] = {}
+    for fp in year_files:
+        stem = fp.stem  # e.g. "berdo_2023"
+        try:
+            year = int(stem.split("_")[1])
+        except (IndexError, ValueError):
+            continue
+        year_map[year] = _load_single_csv(fp)
+
+    if not year_map:
+        # Fallback: single legacy file
+        legacy = data_dir / "berdo.csv"
+        if not legacy.exists():
+            st.error(
+                "Dataset not found. Place a CSV at data/berdo.csv, "
+                "or use per-year files named data/berdo_<year>.csv "
+                "(e.g. data/berdo_2023.csv)."
+            )
+            st.stop()
+        year_map[0] = _load_single_csv(legacy)
+
+    return year_map
 
 
 # ---------------------------------------------------------------------------
@@ -440,20 +482,163 @@ def lookup_building_priority(df, address):
 
 
 # ---------------------------------------------------------------------------
+# Year-over-year trend chart
+# ---------------------------------------------------------------------------
+def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
+    """
+    Searches every loaded year for the given address and renders a
+    year-over-year trend chart for GHG intensity and Site EUI.
+    Returns the prior-year GHG intensity (float | None) for use in the
+    compliance chart overlay, and the prior-year label string.
+    """
+    years_sorted = sorted(y for y in all_years if y != 0)
+    if len(years_sorted) < 2:
+        return None, None  # Nothing to compare
+
+    import re
+    address_clean = re.split(r',', address)[0].strip()
+
+    records = []
+    for yr in years_sorted:
+        df = all_years[yr]
+        matches = df[
+            df["Building Address"].astype(str).str.contains(
+                address_clean, case=False, na=False
+            )
+        ]
+        if matches.empty:
+            continue
+        row = matches.iloc[0]
+        ghg = pd.to_numeric(row.get("ghg_intensity_kgco2e_sqft"), errors="coerce")
+        eui = pd.to_numeric(row.get("site_eui"), errors="coerce")
+        records.append({"year": yr, "ghg_intensity": ghg, "site_eui": eui})
+
+    if len(records) < 2:
+        return None, None
+
+    trend_df = pd.DataFrame(records)
+
+    st.subheader("Year-over-Year Trend")
+
+    # --- Delta metrics row ---
+    latest = trend_df.iloc[-1]
+    prior  = trend_df.iloc[-2]
+
+    ghg_delta  = latest["ghg_intensity"] - prior["ghg_intensity"]
+    eui_delta  = latest["site_eui"]      - prior["site_eui"]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(
+            label=f"GHG Intensity {int(latest['year'])} (kg CO₂e/sf/yr)",
+            value=f"{latest['ghg_intensity']:.3f}" if pd.notna(latest["ghg_intensity"]) else "N/A",
+            delta=f"{ghg_delta:+.3f} vs {int(prior['year'])}" if pd.notna(ghg_delta) else None,
+            delta_color="inverse",   # lower is better
+        )
+    with col2:
+        st.metric(
+            label=f"Site EUI {int(latest['year'])} (kBtu/sf/yr)",
+            value=f"{latest['site_eui']:.1f}" if pd.notna(latest["site_eui"]) else "N/A",
+            delta=f"{eui_delta:+.1f} vs {int(prior['year'])}" if pd.notna(eui_delta) else None,
+            delta_color="inverse",
+        )
+    with col3:
+        # Years with data count
+        n_years = trend_df["ghg_intensity"].notna().sum()
+        st.metric(label="Years of data found", value=int(n_years))
+
+    # --- Trend chart ---
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=trend_df["year"].astype(str),
+        y=trend_df["ghg_intensity"],
+        name="GHG Intensity (kg CO₂e/sf/yr)",
+        mode="lines+markers",
+        line=dict(color="#E24B4A", width=2),
+        marker=dict(size=8),
+        connectgaps=True,
+    ))
+
+    fig.add_trace(go.Bar(
+        x=trend_df["year"].astype(str),
+        y=trend_df["site_eui"],
+        name="Site EUI (kBtu/sf/yr)",
+        marker_color="#3266ad",
+        opacity=0.45,
+        yaxis="y2",
+    ))
+
+    fig.update_layout(
+        xaxis_title="Reporting year",
+        yaxis=dict(title="GHG Intensity (kg CO₂e/sf/yr)", side="left"),
+        yaxis2=dict(
+            title="Site EUI (kBtu/sf/yr)",
+            overlaying="y",
+            side="right",
+            showgrid=False,
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        height=320,
+        margin=dict(t=40, b=40, l=60, r=60),
+        bargap=0.4,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(gridcolor="rgba(128,128,128,0.12)")
+
+    st.plotly_chart(fig, use_container_width=True, key="yoy_trend_chart")
+
+    prior_ghg   = prior["ghg_intensity"] if pd.notna(prior["ghg_intensity"]) else None
+    prior_label = str(int(prior["year"]))
+    return prior_ghg, prior_label
+
+
+# ---------------------------------------------------------------------------
 # App layout
 # ---------------------------------------------------------------------------
-df_full = load_data()
+all_years = load_all_years()
+years_sorted = sorted(y for y in all_years if y != 0)
+multi_year_mode = len(years_sorted) >= 2
 
+# --- Year selector (only shown when multiple years are loaded) ---
+if multi_year_mode:
+    st.sidebar.header("Data year")
+    selected_year = st.sidebar.radio(
+        "Select reporting year to screen:",
+        options=years_sorted,
+        index=len(years_sorted) - 1,   # default = most recent
+        format_func=str,
+        horizontal=False,
+    )
+    df_full = all_years[selected_year]
+    show_yoy = st.sidebar.toggle("Show year-over-year comparison", value=True)
+else:
+    selected_year = years_sorted[0] if years_sorted else 0
+    df_full = all_years[selected_year]
+    show_yoy = False
+
+# --- Page header ---
 st.title("BERDO Building Priority Screening Tool")
 st.write(
     "Enter a Boston building address to see its priority level for BERDO "
     "reporting support, outreach, or retrofit planning — and to estimate "
     "fine exposure under the 2025, 2030, and 2035 emissions standards."
 )
-st.info(
-    "This is a screening tool for analysis purposes. "
-    "It is not an official City of Boston BERDO compliance determination."
-)
+
+if multi_year_mode:
+    year_range_str = f"{years_sorted[0]}–{years_sorted[-1]}"
+    st.info(
+        f"Showing data for **{selected_year}**. "
+        f"Multi-year data loaded: {year_range_str}. "
+        "Use the sidebar to switch years or toggle the trend view."
+    )
+else:
+    st.info(
+        "This is a screening tool for analysis purposes. "
+        "It is not an official City of Boston BERDO compliance determination."
+    )
 
 address_input = st.text_input(
     "Enter building address",
@@ -508,4 +693,14 @@ if address_input:
 
         st.markdown("---")
 
-        render_compliance_section(top)
+        # --- Year-over-year trend (multi-year mode only) ---
+        prior_ghg, prior_label = None, None
+        if show_yoy and multi_year_mode:
+            prior_ghg, prior_label = render_yoy_trend(address_input, all_years)
+            st.markdown("---")
+
+        render_compliance_section(
+            top,
+            prior_year_ghg_intensity=prior_ghg,
+            prior_year_label=prior_label,
+        )
