@@ -28,7 +28,7 @@ The new features include:
 
 Search a Boston address and the tool now tells you not just priority level, but exactly how far the building is from each compliance threshold — and what the Alternative Compliance Payment would be if nothing changes.
 
-Output: 
+**Output**
 
 ![BERDO Building Priority Screening Tool](images/BERDO%20Building%20Priority%20Screening%20Tool.png)
 
@@ -47,9 +47,9 @@ The new features include:
 
 The multi-year view activates automatically when more than one year file is present in the data folder. The single-year experience is unchanged if only one file is loaded.
 
+**Outputs**
 
 ![Year Selector Sidebar](images/Year%20selector.png)
-
 ![Year-over-Year Trend](images/Year%20trend%20section.png)
 
 
