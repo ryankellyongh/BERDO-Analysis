@@ -549,9 +549,17 @@ def _load_single_csv(file_path: Path) -> pd.DataFrame:
     )
 
     # defensive compliance_status handling
-    if "compliance_status" in df.columns:
+    if "compliance_status" in list(df.columns):
         df["compliance_status"] = (
             df["compliance_status"].astype(str).str.lower().str.strip()
+        )
+    elif "Compliance Status" in list(df.columns):
+        df["compliance_status"] = (
+            df["Compliance Status"].astype(str).str.lower().str.strip()
+        )
+    elif "Reporting Compliance Status" in list(df.columns):
+        df["compliance_status"] = (
+            df["Reporting Compliance Status"].astype(str).str.lower().str.strip()
         )
     else:
         import sys
