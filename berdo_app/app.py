@@ -548,6 +548,7 @@ def _load_single_csv(file_path: Path) -> pd.DataFrame:
         df.loc[valid, "ghg_emissions"] / df.loc[valid, "gross_floor_area"]
     )
 
+    # defensive compliance_status handling
     if "compliance_status" in df.columns:
         df["compliance_status"] = (
             df["compliance_status"].astype(str).str.lower().str.strip()
