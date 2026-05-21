@@ -38,6 +38,47 @@ COMPLIANCE_PERIODS = ["2025–29", "2030–34", "2035–39", "2040–44", "2045�
 ACP_RATE = 234  # USD per metric ton CO2e over the limit
 
 # ---------------------------------------------------------------------------
+# Fuel type groupings for breakdown chart
+# ---------------------------------------------------------------------------
+FUEL_EMISSION_COLS = {
+    "Electricity": [
+        "Electricity Emissions (kgCO2e)",
+    ],
+    "Steam / District": [
+        "District Steam Emissions (kgCO2e)",
+        "District Hot Water Emissions (kgCO2e)",
+        "District Chilled Water Emissions (kgCO2e)",
+    ],
+    "Natural Gas": [
+        "Natural Gas Emissions (kgCO2e)",
+    ],
+    "Fossil Fuels": [
+        "Fuel Oil 1 Emissions (kgCO2e)",
+        "Fuel Oil 2 Emissions (kgCO2e)",
+        "Fuel Oil 4 Emissions (kgCO2e)",
+        "Fuel Oil 5 and 6 Emissions (kgCO2e)",
+        "Propane Emissions (kgCO2e)",
+        "Diesel Emissions (kgCO2e)",
+        "Kerosene Emissions (kgCO2e)",
+    ],
+}
+
+FUEL_COLORS = {
+    "Electricity":      "#3266ad",
+    "Steam / District": "#7F77DD",
+    "Natural Gas":      "#BA7517",
+    "Fossil Fuels":     "#D85A30",
+}
+
+# Electricity emissions reduction factors per compliance period
+# relative to 2025 baseline — derived from BERDO Projected Grid Emissions
+# Factors (Boston APCC Policies & Procedures, Appendix B, 2025).
+# Formula: kgCO2e = kWh × (1 - RPS_Class_I) × grid_factor
+# 100,000 kWh example: 2025=18,177 / 2030=12,780 / 2035=9,790 /
+#                       2040=7,100  / 2045=4,815  / 2050=2,840
+ELECTRICITY_REDUCTION_FACTORS = [1.000, 0.703, 0.539, 0.391, 0.265, 0.156]
+
+# ---------------------------------------------------------------------------
 # Mapping from Energy Star Portfolio Manager property types → BERDO categories
 # ---------------------------------------------------------------------------
 PROPERTY_TYPE_MAP = {
@@ -143,12 +184,147 @@ def calculate_compliance_gap(ghg_intensity, sqft, berdo_category):
 
 
 # ---------------------------------------------------------------------------
+# Fuel breakdown chart
+# ---------------------------------------------------------------------------
+def render_fuel_breakdown_chart(row, sqft):
+    """
+    Two charts:
+    1. Current emissions split by fuel type (stacked horizontal bar)
+    2. Projected emissions by compliance period showing electricity
+       declining with grid decarbonisation vs. fixed fossil fuel load
+    """
+    group_emissions = {}
+    for group, cols in FUEL_EMISSION_COLS.items():
+        total = sum(
+            pd.to_numeric(row.get(col, 0), errors="coerce") or 0
+            for col in cols
+        )
+        group_emissions[group] = total
+
+    total_emissions = sum(group_emissions.values())
+    if total_emissions == 0 or sqft <= 0:
+        st.caption(
+            "Fuel type breakdown not available — "
+            "individual emissions columns missing or zero."
+        )
+        return
+
+    # Convert to per-sqft intensity
+    group_intensity = {k: v / sqft for k, v in group_emissions.items()}
+
+    st.subheader("Energy Type Breakdown")
+
+    # --- Chart 1: Current fuel mix (stacked horizontal bar) ---
+    fig1 = go.Figure()
+    for group, intensity in group_intensity.items():
+        if intensity > 0:
+            pct = intensity / sum(group_intensity.values()) * 100
+            fig1.add_trace(go.Bar(
+                name=group,
+                x=[round(intensity, 4)],
+                y=["Current emissions"],
+                orientation="h",
+                marker_color=FUEL_COLORS[group],
+                text=f"{pct:.0f}%",
+                textposition="inside",
+                insidetextanchor="middle",
+                hovertemplate=(
+                    f"<b>{group}</b><br>"
+                    f"{intensity:.3f} kg CO₂e/sf<br>"
+                    f"{pct:.1f}% of total<extra></extra>"
+                ),
+            ))
+
+    fig1.update_layout(
+        barmode="stack",
+        height=110,
+        margin=dict(t=8, b=32, l=10, r=10),
+        xaxis_title="kg CO₂e / sf / yr",
+        yaxis=dict(showticklabels=False),
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig1.update_xaxes(showgrid=False)
+    st.plotly_chart(fig1, use_container_width=True, key=f"fuel_mix_{id(row)}")
+
+    # --- Chart 2: Projected mix per compliance period ---
+    elec_base    = group_intensity.get("Electricity", 0)
+    non_elec     = {k: v for k, v in group_intensity.items() if k != "Electricity"}
+
+    fig2 = go.Figure()
+
+    # Non-electricity: flat across all periods (requires active intervention)
+    for group, intensity in non_elec.items():
+        if intensity > 0:
+            fig2.add_trace(go.Bar(
+                name=group,
+                x=COMPLIANCE_PERIODS,
+                y=[round(intensity, 4)] * len(COMPLIANCE_PERIODS),
+                marker_color=FUEL_COLORS[group],
+            ))
+
+    # Electricity: declines with projected grid decarbonisation
+    elec_projected = [
+        round(elec_base * f, 4)
+        for f in ELECTRICITY_REDUCTION_FACTORS
+    ]
+    fig2.add_trace(go.Bar(
+        name="Electricity (grid decarbonisation applied)",
+        x=COMPLIANCE_PERIODS,
+        y=elec_projected,
+        marker_color=FUEL_COLORS["Electricity"],
+    ))
+
+    # BERDO limit overlay
+    raw_type = row.get("Property Type") or row.get("property_type")
+    berdo_category = map_property_type(raw_type)
+    if berdo_category and berdo_category in BERDO_STANDARDS:
+        fig2.add_trace(go.Scatter(
+            x=COMPLIANCE_PERIODS,
+            y=BERDO_STANDARDS[berdo_category],
+            name="BERDO limit",
+            mode="lines+markers",
+            line=dict(color="#E24B4A", width=2, dash="dash"),
+            marker=dict(size=6),
+        ))
+
+    fig2.update_layout(
+        barmode="stack",
+        xaxis_title="Compliance period",
+        yaxis_title="kg CO₂e / sf / yr",
+        height=340,
+        margin=dict(t=40, b=40, l=60, r=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        bargap=0.35,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig2.update_xaxes(showgrid=False)
+    fig2.update_yaxes(gridcolor="rgba(128,128,128,0.12)")
+    st.plotly_chart(fig2, use_container_width=True, key=f"fuel_projected_{id(row)}")
+
+    # Insight caption
+    elec_pct     = (elec_base / sum(group_intensity.values()) * 100) if total_emissions > 0 else 0
+    non_elec_total = sum(non_elec.values())
+    st.caption(
+        f"**{elec_pct:.0f}%** of emissions come from electricity and will decline "
+        f"automatically as the ISO-NE grid decarbonises (RPS Class I: 27% → 60% by 2050). "
+        f"The remaining **{100 - elec_pct:.0f}%** "
+        f"({non_elec_total:.3f} kg CO₂e/sf/yr) requires active fuel switching or "
+        f"efficiency improvements. "
+        f"Source: BERDO Projected Grid Emissions Factors, "
+        f"Boston APCC Policies & Procedures, Appendix B (2025)."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Compliance gap display
 # ---------------------------------------------------------------------------
 def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_label=None):
     ghg_intensity = row.get("GHG Intensity (kgCO2e/sqft)")
-    sqft = row.get("Gross Floor Area")
-    raw_type = row.get("Property Type")
+    sqft          = row.get("Gross Floor Area")
+    raw_type      = row.get("Property Type")
     berdo_category = map_property_type(raw_type)
 
     st.subheader("Compliance Gap Analysis")
@@ -181,17 +357,19 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
         f"BERDO category: **{berdo_category}**"
     )
 
+    # --- Fuel breakdown charts ---
+    st.markdown("---")
+    render_fuel_breakdown_chart(row, sqft)
+    st.markdown("---")
+
+    # --- Period metric cards (2025–29, 2030–34, 2035–39) ---
     cols = st.columns(3)
     period_labels = ["2025–2029", "2030–2034", "2035–2039"]
     for i, col in enumerate(cols):
         g = gaps[i]
         with col:
-            status = "✅ Compliant" if g["compliant"] else "⚠️ Non-compliant"
-            fine_str = (
-                "$0"
-                if g["compliant"]
-                else f"${g['annual_fine_usd']:,.0f}/yr"
-            )
+            status    = "✅ Compliant" if g["compliant"] else "⚠️ Non-compliant"
+            fine_str  = "$0" if g["compliant"] else f"${g['annual_fine_usd']:,.0f}/yr"
             gap_delta = (
                 f"−{abs(g['gap']):.2f} kg under limit"
                 if g["compliant"]
@@ -210,8 +388,10 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
                 )
 
     st.markdown("---")
+
+    # --- Compliance trajectory chart ---
     limits = [g["limit"] for g in gaps]
-    fines = [g["annual_fine_usd"] for g in gaps]
+    fines  = [g["annual_fine_usd"] for g in gaps]
 
     fig = go.Figure()
 
@@ -233,7 +413,6 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
         line=dict(color="#E24B4A", width=2, dash="dash"),
     ))
 
-    # Optional prior-year intensity overlay
     if prior_year_ghg_intensity is not None and not pd.isna(prior_year_ghg_intensity):
         fig.add_trace(go.Scatter(
             x=COMPLIANCE_PERIODS,
@@ -272,12 +451,12 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
-
     fig.update_xaxes(showgrid=False)
     fig.update_yaxes(gridcolor="rgba(128,128,128,0.12)")
 
     st.plotly_chart(fig, use_container_width=True, key=f"compliance_chart_{id(row)}")
 
+    # --- Cumulative fine callout ---
     non_compliant_periods = [g for g in gaps if not g["compliant"]]
     if non_compliant_periods:
         total_5yr_fine = sum(g["annual_fine_usd"] * 5 for g in non_compliant_periods)
@@ -290,6 +469,9 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
 
     st.caption(
         "ACP = Alternative Compliance Payment at $234/metric ton CO₂e over limit. "
+        "Compliance gap calculated using current reported GHG intensity held constant — "
+        "does not project future grid decarbonisation. This represents a conservative "
+        "baseline assuming no operational changes. "
         "Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021). "
         "Not an official City of Boston compliance determination."
     )
@@ -318,7 +500,16 @@ Scores of 6 or above are flagged as High priority. Scores of 3–5 are Moderate.
 The tool compares each building's reported GHG intensity (kg CO₂e per square foot per year)
 against the BERDO 2.0 emissions limits for its property type. If the building exceeds the limit,
 the tool estimates the annual Alternative Compliance Payment (ACP) at $234 per excess metric
-ton of CO₂e.
+ton of CO₂e. GHG intensity is held constant at the current reported value — future grid
+decarbonisation is shown separately in the Energy Type Breakdown charts above.
+
+**How is the fuel breakdown calculated?**
+
+Individual fuel emissions columns from the BERDO dataset are grouped into four categories:
+Electricity, Steam/District, Natural Gas, and Fossil Fuels. The projected chart applies
+BERDO's official grid decarbonisation factors (from Boston APCC Policies & Procedures,
+Appendix B, 2025) to the electricity component only — reflecting that renewable energy
+can only offset electricity emissions under BERDO, not fossil fuel combustion.
 
 Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021).
 Not an official City of Boston compliance determination.
@@ -326,17 +517,18 @@ Not an official City of Boston compliance determination.
 
 
 # ---------------------------------------------------------------------------
-# Data loading — supports single file (berdo.csv) or multi-year files
-# (berdo_2022.csv, berdo_2023.csv, …) in the data/ folder.
+# Data loading
 # ---------------------------------------------------------------------------
 COLUMN_RENAME_MAP = {
-    "Largest Property Type": "property_type",
-    "Reported Gross Floor Area (Sq Ft)": "gross_floor_area",
-    "Site EUI (Energy Use Intensity kBtu/ft²)": "site_eui",
-    "Estimated Total GHG Emissions (kgCO2e)": "ghg_emissions",
-    "Estimated Total GHG Emissions e(kgCO2e)": "ghg_emissions",
-    "Reporting Compliance Status": "compliance_status",
-    "First Emissions Compliance Year (Projected)": "compliance_year",
+    "Largest Property Type":                        "property_type",
+    "Reported Gross Floor Area (Sq Ft)":            "gross_floor_area",
+    "Site EUI (Energy Use Intensity kBtu/ft²)":     "site_eui",
+    "Estimated Total GHG Emissions (kgCO2e)":       "ghg_emissions",
+    "Estimated Total GHG Emissions e(kgCO2e)":      "ghg_emissions",
+    "Total GHG Emissions - Estimated (kgCO2e)":     "ghg_emissions",
+    "Reporting Compliance Status":                  "compliance_status",
+    "Compliance Status":                            "compliance_status",
+    "First Emissions Compliance Year (Projected)":  "compliance_year",
 }
 
 REQUIRED_COLUMNS = [
@@ -363,6 +555,14 @@ def _load_single_csv(file_path: Path) -> pd.DataFrame:
     df["site_eui"]         = pd.to_numeric(df["site_eui"],         errors="coerce")
     df["ghg_emissions"]    = pd.to_numeric(df["ghg_emissions"],    errors="coerce")
 
+    # Load all individual fuel emissions columns as numeric
+    all_fuel_cols = [col for cols in FUEL_EMISSION_COLS.values() for col in cols]
+    for col in all_fuel_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        else:
+            df[col] = 0.0
+
     valid = (
         df["ghg_emissions"].notna() &
         df["gross_floor_area"].notna() &
@@ -381,19 +581,12 @@ def _load_single_csv(file_path: Path) -> pd.DataFrame:
 
 @st.cache_data
 def load_all_years() -> dict[int, pd.DataFrame]:
-    """
-    Returns a dict mapping year (int) → DataFrame.
-
-    Discovery rules (in priority order):
-      1. berdo_<year>.csv files  →  multi-year mode
-      2. berdo.csv               →  single-year fallback (keyed as year 0)
-    """
-    data_dir = Path("data")
+    data_dir   = Path("data")
     year_files = sorted(data_dir.glob("berdo_*.csv"))
 
     year_map: dict[int, pd.DataFrame] = {}
     for fp in year_files:
-        stem = fp.stem  # e.g. "berdo_2023"
+        stem = fp.stem
         try:
             year = int(stem.split("_")[1])
         except (IndexError, ValueError):
@@ -401,7 +594,6 @@ def load_all_years() -> dict[int, pd.DataFrame]:
         year_map[year] = _load_single_csv(fp)
 
     if not year_map:
-        # Fallback: single legacy file
         legacy = data_dir / "berdo.csv"
         if not legacy.exists():
             st.error(
@@ -419,7 +611,7 @@ def load_all_years() -> dict[int, pd.DataFrame]:
 # Priority scoring
 # ---------------------------------------------------------------------------
 def assign_priority(row, median_eui):
-    score = 0
+    score   = 0
     reasons = []
 
     if row["compliance_status"] == "not submitted":
@@ -455,16 +647,20 @@ def lookup_building_priority(df, address):
     import re
     address_clean = re.split(r',', address)[0].strip()
     matches = df[
-        df["Building Address"].astype(str).str.contains(address_clean, case=False, na=False)
+        df["Building Address"].astype(str).str.contains(
+            address_clean, case=False, na=False
+        )
     ]
     if matches.empty:
         return None
 
     median_eui = df["site_eui"].median()
-    results = []
+    results    = []
+    fuel_cols  = [col for cols in FUEL_EMISSION_COLS.values() for col in cols]
 
     for _, row in matches.iterrows():
         priority, score, reasons = assign_priority(row, median_eui)
+        fuel_data = {col: row.get(col, 0) for col in fuel_cols}
         results.append({
             "Building Address":            row.get("Building Address"),
             "Property Owner Name":         row.get("Property Owner Name"),
@@ -476,6 +672,7 @@ def lookup_building_priority(df, address):
             "Priority Level":              priority,
             "Priority Score":              score,
             "Reasons":                     "; ".join(reasons),
+            **fuel_data,
         })
 
     return pd.DataFrame(results)
@@ -485,22 +682,16 @@ def lookup_building_priority(df, address):
 # Year-over-year trend chart
 # ---------------------------------------------------------------------------
 def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
-    """
-    Searches every loaded year for the given address and renders a
-    year-over-year trend chart for GHG intensity and Site EUI.
-    Returns the prior-year GHG intensity (float | None) for use in the
-    compliance chart overlay, and the prior-year label string.
-    """
     years_sorted = sorted(y for y in all_years if y != 0)
     if len(years_sorted) < 2:
-        return None, None  # Nothing to compare
+        return None, None
 
     import re
     address_clean = re.split(r',', address)[0].strip()
 
     records = []
     for yr in years_sorted:
-        df = all_years[yr]
+        df      = all_years[yr]
         matches = df[
             df["Building Address"].astype(str).str.contains(
                 address_clean, case=False, na=False
@@ -520,12 +711,11 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
 
     st.subheader("Year-over-Year Trend")
 
-    # --- Delta metrics row ---
     latest = trend_df.iloc[-1]
     prior  = trend_df.iloc[-2]
 
-    ghg_delta  = latest["ghg_intensity"] - prior["ghg_intensity"]
-    eui_delta  = latest["site_eui"]      - prior["site_eui"]
+    ghg_delta = latest["ghg_intensity"] - prior["ghg_intensity"]
+    eui_delta = latest["site_eui"]      - prior["site_eui"]
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -533,7 +723,7 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
             label=f"GHG Intensity {int(latest['year'])} (kg CO₂e/sf/yr)",
             value=f"{latest['ghg_intensity']:.3f}" if pd.notna(latest["ghg_intensity"]) else "N/A",
             delta=f"{ghg_delta:+.3f} vs {int(prior['year'])}" if pd.notna(ghg_delta) else None,
-            delta_color="inverse",   # lower is better
+            delta_color="inverse",
         )
     with col2:
         st.metric(
@@ -543,7 +733,7 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
             delta_color="inverse",
         )
     with col3:
-        n_ghg = trend_df["ghg_intensity"].notna().sum()
+        n_ghg       = trend_df["ghg_intensity"].notna().sum()
         missing_ghg = trend_df.loc[trend_df["ghg_intensity"].isna(), "year"].astype(int).tolist()
         st.metric(label="Years of GHG data", value=int(n_ghg))
         if missing_ghg:
@@ -551,7 +741,7 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
         else:
             st.caption("All years present")
     with col4:
-        n_eui = trend_df["site_eui"].notna().sum()
+        n_eui       = trend_df["site_eui"].notna().sum()
         missing_eui = trend_df.loc[trend_df["site_eui"].isna(), "year"].astype(int).tolist()
         st.metric(label="Years of EUI data", value=int(n_eui))
         if missing_eui:
@@ -559,7 +749,6 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
         else:
             st.caption("All years present")
 
-    # --- Trend chart ---
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -603,7 +792,8 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
 
     st.plotly_chart(fig, use_container_width=True, key="yoy_trend_chart")
 
-    if 2022 in [r["year"] for r in records] and trend_df.loc[trend_df["year"] == 2022, "ghg_intensity"].isna().all():
+    if 2022 in [r["year"] for r in records] and \
+       trend_df.loc[trend_df["year"] == 2022, "ghg_intensity"].isna().all():
         st.caption(
             "⚠️ 2022 GHG intensity is not shown — the City of Boston did not publish "
             "GHG emissions totals in that year's dataset."
@@ -617,28 +807,26 @@ def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
 # ---------------------------------------------------------------------------
 # App layout
 # ---------------------------------------------------------------------------
-all_years = load_all_years()
+all_years    = load_all_years()
 years_sorted = sorted(y for y in all_years if y != 0)
 multi_year_mode = len(years_sorted) >= 2
 
-# --- Year selector (only shown when multiple years are loaded) ---
 if multi_year_mode:
     st.sidebar.header("Data year")
     selected_year = st.sidebar.radio(
         "Select reporting year to screen:",
         options=years_sorted,
-        index=len(years_sorted) - 1,   # default = most recent
+        index=len(years_sorted) - 1,
         format_func=str,
         horizontal=False,
     )
-    df_full = all_years[selected_year]
+    df_full  = all_years[selected_year]
     show_yoy = st.sidebar.toggle("Show year-over-year comparison", value=True)
 else:
     selected_year = years_sorted[0] if years_sorted else 0
-    df_full = all_years[selected_year]
-    show_yoy = False
+    df_full       = all_years[selected_year]
+    show_yoy      = False
 
-# --- Page header ---
 st.title("BERDO Building Priority Screening Tool")
 st.write(
     "Enter a Boston building address to see its priority level for BERDO "
@@ -685,7 +873,7 @@ if address_input:
         ]
         st.dataframe(result[display_cols], use_container_width=True)
 
-        top = result.iloc[0]
+        top  = result.iloc[0]
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Priority Level", top["Priority Level"])
@@ -712,7 +900,6 @@ if address_input:
 
         st.markdown("---")
 
-        # --- Year-over-year trend (multi-year mode only) ---
         prior_ghg, prior_label = None, None
         if show_yoy and multi_year_mode:
             prior_ghg, prior_label = render_yoy_trend(address_input, all_years)
