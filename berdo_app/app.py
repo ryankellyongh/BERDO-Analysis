@@ -827,11 +827,15 @@ if show_grid_decarb:
         ),
     )
     elec_share = elec_share_pct / 100.0
-    base_ef = PROJECTED_GRID_EF.get(selected_year, PROJECTED_GRID_EF[2025])
+    base_raw_ef = PROJECTED_GRID_EF.get(selected_year, PROJECTED_GRID_EF[2025])
+    base_rps    = RPS_CLASS_I.get(selected_year, RPS_CLASS_I[2025])
+    eff_base_ef = round(base_raw_ef * (1.0 - base_rps), 1)
+    eff_2050_ef = round(PROJECTED_GRID_EF[2050] * (1.0 - RPS_CLASS_I[2050]), 1)
     st.sidebar.caption(
-        f"Base year grid EF ({selected_year}): **{base_ef} kg/MWh** "
-        f"(Appendix B). Projected EF at 2050: **{PROJECTED_GRID_EF[2050]} kg/MWh** "
-        f"({round((1 - PROJECTED_GRID_EF[2050] / base_ef) * 100)}% cleaner)."
+        f"Effective grid EF ({selected_year}): **{eff_base_ef} kg/MWh** "
+        f"({base_raw_ef} × (1 − {int(base_rps*100)}%) RPS). "
+        f"Effective EF at 2050: **{eff_2050_ef} kg/MWh** "
+        f"({round((1 - eff_2050_ef / eff_base_ef) * 100)}% cleaner)."
     )
 else:
     elec_share = None
