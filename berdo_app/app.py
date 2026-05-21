@@ -54,6 +54,15 @@ PROJECTED_GRID_EF = {
 # Representative year for each compliance period (midpoint, or period start for 2050+)
 PERIOD_REPRESENTATIVE_YEARS = [2027, 2032, 2037, 2042, 2047, 2050]
 
+RPS_CLASS_I = {
+    2022: 0.20, 2023: 0.22, 2024: 0.24, 2025: 0.27, 2026: 0.30,
+    2027: 0.33, 2028: 0.36, 2029: 0.39, 2030: 0.40, 2031: 0.41,
+    2032: 0.42, 2033: 0.43, 2034: 0.44, 2035: 0.45, 2036: 0.46,
+    2037: 0.47, 2038: 0.48, 2039: 0.49, 2040: 0.50, 2041: 0.51,
+    2042: 0.52, 2043: 0.53, 2044: 0.54, 2045: 0.55, 2046: 0.56,
+    2047: 0.57, 2048: 0.58, 2049: 0.59, 2050: 0.60,
+}
+
 # ---------------------------------------------------------------------------
 # Mapping from Energy Star Portfolio Manager property types → BERDO categories
 # ---------------------------------------------------------------------------
@@ -146,17 +155,22 @@ def project_ghg_intensities(ghg_intensity, elec_share, base_year):
     Returns a list of 6 projected intensities, one per COMPLIANCE_PERIODS entry.
     Falls back to the base_year EF if base_year is not in PROJECTED_GRID_EF.
     """
-    base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
-    if base_ef == 0:
+    raw_base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
+    if raw_base_ef == 0:
         return [ghg_intensity] * len(COMPLIANCE_PERIODS)
+
+    base_rps = RPS_CLASS_I.get(base_year, RPS_CLASS_I[2025])
+    effective_base_ef = raw_base_ef * (1.0 - base_rps)
 
     elec_intensity   = ghg_intensity * elec_share
     fossil_intensity = ghg_intensity * (1.0 - elec_share)
 
     projected = []
     for yr in PERIOD_REPRESENTATIVE_YEARS:
-        future_ef = PROJECTED_GRID_EF.get(yr, base_ef)
-        future_elec = elec_intensity * (future_ef / base_ef)
+        future_raw_ef = PROJECTED_GRID_EF.get(yr, raw_base_ef)
+        future_rps    = RPS_CLASS_I.get(yr, base_rps)
+        effective_future_ef = future_raw_ef * (1.0 - future_rps)
+        future_elec = elec_intensity * (effective_future_ef / effective_base_ef)
         projected.append(round(fossil_intensity + future_elec, 3))
     return projected
 
