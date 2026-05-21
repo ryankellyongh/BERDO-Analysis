@@ -38,6 +38,23 @@ COMPLIANCE_PERIODS = ["2025–29", "2030–34", "2035–39", "2040–44", "2045�
 ACP_RATE = 234  # USD per metric ton CO2e over the limit
 
 # ---------------------------------------------------------------------------
+# Projected ISO New England grid emissions factors by year
+# Source: BERDO Emissions Factors List, Appendix B (updated May 5, 2026)
+# Units: kg CO2e / MWh
+# ---------------------------------------------------------------------------
+PROJECTED_GRID_EF = {
+    2022: 270, 2023: 263, 2024: 256, 2025: 249, 2026: 242,
+    2027: 265, 2028: 265, 2029: 264, 2030: 259, 2031: 254,
+    2032: 249, 2033: 243, 2034: 237, 2035: 231, 2036: 224,
+    2037: 217, 2038: 211, 2039: 204, 2040: 198, 2041: 192,
+    2042: 187, 2043: 182, 2044: 177, 2045: 173, 2046: 168,
+    2047: 163, 2048: 159, 2049: 155, 2050: 150,
+}
+
+# Representative year for each compliance period (midpoint, or period start for 2050+)
+PERIOD_REPRESENTATIVE_YEARS = [2027, 2032, 2037, 2042, 2047, 2050]
+
+# ---------------------------------------------------------------------------
 # Mapping from Energy Star Portfolio Manager property types → BERDO categories
 # ---------------------------------------------------------------------------
 PROPERTY_TYPE_MAP = {
@@ -117,6 +134,34 @@ def map_property_type(raw_type):
 
 
 # ---------------------------------------------------------------------------
+# Grid decarbonization projection
+# ---------------------------------------------------------------------------
+def project_ghg_intensities(ghg_intensity, elec_share, base_year):
+    """
+    Project GHG intensity for each compliance period assuming:
+      - Electricity component shrinks as the grid decarbonizes
+        (using Appendix B projected grid EFs)
+      - Fossil fuel component stays constant (no operational changes)
+
+    Returns a list of 6 projected intensities, one per COMPLIANCE_PERIODS entry.
+    Falls back to the base_year EF if base_year is not in PROJECTED_GRID_EF.
+    """
+    base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
+    if base_ef == 0:
+        return [ghg_intensity] * len(COMPLIANCE_PERIODS)
+
+    elec_intensity   = ghg_intensity * elec_share
+    fossil_intensity = ghg_intensity * (1.0 - elec_share)
+
+    projected = []
+    for yr in PERIOD_REPRESENTATIVE_YEARS:
+        future_ef = PROJECTED_GRID_EF.get(yr, base_ef)
+        future_elec = elec_intensity * (future_ef / base_ef)
+        projected.append(round(fossil_intensity + future_elec, 3))
+    return projected
+
+
+# ---------------------------------------------------------------------------
 # Compliance gap calculation
 # ---------------------------------------------------------------------------
 def calculate_compliance_gap(ghg_intensity, sqft, berdo_category):
@@ -145,7 +190,17 @@ def calculate_compliance_gap(ghg_intensity, sqft, berdo_category):
 # ---------------------------------------------------------------------------
 # Compliance gap display
 # ---------------------------------------------------------------------------
-def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_label=None):
+def render_compliance_section(
+    row,
+    prior_year_ghg_intensity=None,
+    prior_year_label=None,
+    projected_intensities=None,
+    base_year=2025,
+):
+    """
+    projected_intensities: list of 6 floats (one per compliance period) from
+    project_ghg_intensities(), or None to skip the grid decarb overlay.
+    """
     ghg_intensity = row.get("GHG Intensity (kgCO2e/sqft)")
     sqft = row.get("Gross Floor Area")
     raw_type = row.get("Property Type")
@@ -175,12 +230,25 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
 
     gaps = calculate_compliance_gap(ghg_intensity, sqft, berdo_category)
 
+    # Projected gaps (for grid decarb scenario metric cards)
+    if projected_intensities is not None:
+        proj_gaps = [
+            calculate_compliance_gap(pi, sqft, berdo_category)
+            for pi in projected_intensities
+        ]
+        # proj_gaps[i] is a list of 6 period gaps for the projected intensity at period i
+        # We only need the gap for each period against its own limit, i.e. proj_gaps[i][i]
+        proj_gap_for_period = [proj_gaps[i][i] for i in range(len(COMPLIANCE_PERIODS))]
+    else:
+        proj_gap_for_period = None
+
     st.caption(
         f"Current intensity: **{ghg_intensity:.3f} kg CO₂e/sf/yr** · "
         f"Floor area: **{int(sqft):,} sq ft** · "
         f"BERDO category: **{berdo_category}**"
     )
 
+    # --- Metric cards (first 3 periods) ---
     cols = st.columns(3)
     period_labels = ["2025–2029", "2030–2034", "2035–2039"]
     for i, col in enumerate(cols):
@@ -208,10 +276,22 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
                     f"Limit: {g['limit']} kg · "
                     f"{g['excess_metric_tons']:,.0f} excess metric tons"
                 )
+                # Show projected outcome if available
+                if proj_gap_for_period is not None:
+                    pg = proj_gap_for_period[i]
+                    if pg["compliant"]:
+                        st.caption("🌱 Grid scenario: compliant")
+                    else:
+                        st.caption(
+                            f"🌱 Grid scenario: +{pg['gap']:.2f} kg over limit "
+                            f"(${pg['annual_fine_usd']:,.0f}/yr)"
+                        )
 
     st.markdown("---")
+
+    # --- Chart ---
     limits = [g["limit"] for g in gaps]
-    fines = [g["annual_fine_usd"] for g in gaps]
+    fines  = [g["annual_fine_usd"] for g in gaps]
 
     fig = go.Figure()
 
@@ -228,10 +308,21 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
     fig.add_trace(go.Scatter(
         x=COMPLIANCE_PERIODS,
         y=[ghg_intensity] * len(COMPLIANCE_PERIODS),
-        name="Current intensity",
+        name="Conservative (no change)",
         mode="lines",
         line=dict(color="#E24B4A", width=2, dash="dash"),
     ))
+
+    # Grid decarbonization scenario overlay
+    if projected_intensities is not None:
+        fig.add_trace(go.Scatter(
+            x=COMPLIANCE_PERIODS,
+            y=projected_intensities,
+            name="Grid decarbonization scenario",
+            mode="lines+markers",
+            line=dict(color="#2ECC71", width=2),
+            marker=dict(size=7, symbol="diamond"),
+        ))
 
     # Optional prior-year intensity overlay
     if prior_year_ghg_intensity is not None and not pd.isna(prior_year_ghg_intensity):
@@ -246,13 +337,29 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
     fig.add_trace(go.Scatter(
         x=COMPLIANCE_PERIODS,
         y=fines,
-        name="Annual ACP fine (USD)",
+        name="Annual ACP fine — conservative (USD)",
         mode="lines+markers",
         yaxis="y2",
         line=dict(color="#BA7517", width=1.5, dash="dot"),
         marker=dict(size=6),
         visible="legendonly",
     ))
+
+    if projected_intensities is not None:
+        proj_fines = [
+            calculate_compliance_gap(pi, sqft, berdo_category)[i]["annual_fine_usd"]
+            for i, pi in enumerate(projected_intensities)
+        ]
+        fig.add_trace(go.Scatter(
+            x=COMPLIANCE_PERIODS,
+            y=proj_fines,
+            name="Annual ACP fine — grid scenario (USD)",
+            mode="lines+markers",
+            yaxis="y2",
+            line=dict(color="#27AE60", width=1.5, dash="dot"),
+            marker=dict(size=6),
+            visible="legendonly",
+        ))
 
     y_max = max(max(limits), ghg_intensity) * 1.25
 
@@ -266,7 +373,7 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
             showgrid=False,
         ),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        height=380,
+        height=400,
         margin=dict(t=40, b=40, l=60, r=60),
         bargap=0.35,
         plot_bgcolor="rgba(0,0,0,0)",
@@ -278,24 +385,51 @@ def render_compliance_section(row, prior_year_ghg_intensity=None, prior_year_lab
 
     st.plotly_chart(fig, use_container_width=True, key=f"compliance_chart_{id(row)}")
 
+    # --- Fine exposure summary ---
     non_compliant_periods = [g for g in gaps if not g["compliant"]]
     if non_compliant_periods:
         total_5yr_fine = sum(g["annual_fine_usd"] * 5 for g in non_compliant_periods)
-        st.info(
-            f"If no emissions reductions are made, this building faces an estimated "
-            f"**${total_5yr_fine:,.0f}** in cumulative ACP payments across "
+        msg = (
+            f"**Conservative scenario:** if no emissions reductions are made, this building "
+            f"faces an estimated **${total_5yr_fine:,.0f}** in cumulative ACP payments across "
             f"{len(non_compliant_periods)} non-compliant period(s) "
-            f"(calculated as annual fine × 5 years per period)."
+            f"(annual fine × 5 years per period)."
         )
+        if projected_intensities is not None:
+            proj_non_compliant = [
+                proj_gap_for_period[i]
+                for i in range(len(COMPLIANCE_PERIODS))
+                if not proj_gap_for_period[i]["compliant"]
+            ]
+            total_proj_fine = sum(g["annual_fine_usd"] * 5 for g in proj_non_compliant)
+            if proj_non_compliant:
+                msg += (
+                    f"\n\n**Grid decarbonization scenario:** estimated **${total_proj_fine:,.0f}** "
+                    f"across {len(proj_non_compliant)} non-compliant period(s)."
+                )
+            else:
+                msg += "\n\n**Grid decarbonization scenario:** building achieves compliance in all periods from grid cleaning alone."
+        st.info(msg)
 
-    st.caption(
+    # --- Caption ---
+    base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
+    caption = (
         "ACP = Alternative Compliance Payment at $234/metric ton CO₂e over limit. "
-        "Compliance gap calculated using current reported GHG intensity held constant — "
-        "does not project future grid decarbonisation. This represents a conservative "
-        "baseline assuming no operational changes. "
-        "Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021). "
+        "**Conservative line:** current GHG intensity held flat — no operational changes, "
+        "no grid improvement. "
+    )
+    if projected_intensities is not None:
+        caption += (
+            f"**Grid decarbonization line:** electricity component scaled by ISO-NE projected "
+            f"grid EFs (Appendix B, base year {base_year} = {base_ef} kg/MWh); "
+            "fossil fuel use held constant. "
+        )
+    caption += (
+        "Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021); "
+        "BERDO Emissions Factors List (City of Boston, May 2026). "
         "Not an official City of Boston compliance determination."
     )
+    st.caption(caption)
 
     with st.expander("About this tool"):
         st.markdown("""
@@ -323,7 +457,18 @@ against the BERDO 2.0 emissions limits for its property type. If the building ex
 the tool estimates the annual Alternative Compliance Payment (ACP) at $234 per excess metric
 ton of CO₂e.
 
-Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021).
+**What is the grid decarbonization scenario?**
+
+The ISO New England electric grid is projected to become cleaner over time as renewable energy
+grows. This scenario holds fossil fuel use constant but scales down the electricity-attributed
+emissions using the City of Boston's official projected grid emissions factors (Appendix B of the
+BERDO Emissions Factors List). Use the sidebar slider to set the share of the building's
+emissions that come from electricity. If unknown, 50% is a reasonable starting point for a
+mixed-use or office building; electricity-heavy buildings (all-electric, data centers) should
+use a higher value.
+
+Source: BERDO 2.0 Draft Phase 1 Regulations (Boston APCC, 2021);
+BERDO Emissions Factors List (City of Boston, updated May 5, 2026).
 Not an official City of Boston compliance determination.
 """)
 
@@ -624,13 +769,13 @@ all_years = load_all_years()
 years_sorted = sorted(y for y in all_years if y != 0)
 multi_year_mode = len(years_sorted) >= 2
 
-# --- Year selector (only shown when multiple years are loaded) ---
+# --- Sidebar: year selector ---
 if multi_year_mode:
     st.sidebar.header("Data year")
     selected_year = st.sidebar.radio(
         "Select reporting year to screen:",
         options=years_sorted,
-        index=len(years_sorted) - 1,   # default = most recent
+        index=len(years_sorted) - 1,
         format_func=str,
         horizontal=False,
     )
@@ -640,6 +785,42 @@ else:
     selected_year = years_sorted[0] if years_sorted else 0
     df_full = all_years[selected_year]
     show_yoy = False
+
+# --- Sidebar: grid decarbonization scenario ---
+st.sidebar.header("Grid decarbonization scenario")
+show_grid_decarb = st.sidebar.toggle(
+    "Show grid decarbonization scenario",
+    value=False,
+    help=(
+        "Projects future GHG intensity assuming the ISO-NE grid cleans up "
+        "per the City of Boston's official projected emissions factors "
+        "(Appendix B, BERDO Emissions Factors List, May 2026). "
+        "Fossil fuel use is held constant."
+    ),
+)
+if show_grid_decarb:
+    elec_share_pct = st.sidebar.slider(
+        "Electricity share of GHG emissions (%)",
+        min_value=0,
+        max_value=100,
+        value=50,
+        step=5,
+        help=(
+            "Estimated percentage of this building's total GHG emissions "
+            "that come from grid electricity (vs. fossil fuels such as "
+            "natural gas). Check the building's energy breakdown in ESPM "
+            "or use 50% as a starting estimate for a typical office/mixed-use building."
+        ),
+    )
+    elec_share = elec_share_pct / 100.0
+    base_ef = PROJECTED_GRID_EF.get(selected_year, PROJECTED_GRID_EF[2025])
+    st.sidebar.caption(
+        f"Base year grid EF ({selected_year}): **{base_ef} kg/MWh** "
+        f"(Appendix B). Projected EF at 2050: **{PROJECTED_GRID_EF[2050]} kg/MWh** "
+        f"({round((1 - PROJECTED_GRID_EF[2050] / base_ef) * 100)}% cleaner)."
+    )
+else:
+    elec_share = None
 
 # --- Page header ---
 st.title("BERDO Building Priority Screening Tool")
@@ -721,8 +902,21 @@ if address_input:
             prior_ghg, prior_label = render_yoy_trend(address_input, all_years)
             st.markdown("---")
 
+        # --- Grid decarbonization projection ---
+        projected_intensities = None
+        if show_grid_decarb and elec_share is not None:
+            ghg_val = top.get("GHG Intensity (kgCO2e/sqft)")
+            if pd.notna(ghg_val) and ghg_val > 0:
+                projected_intensities = project_ghg_intensities(
+                    ghg_intensity=float(ghg_val),
+                    elec_share=elec_share,
+                    base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
+                )
+
         render_compliance_section(
             top,
             prior_year_ghg_intensity=prior_ghg,
             prior_year_label=prior_label,
+            projected_intensities=projected_intensities,
+            base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
         )
