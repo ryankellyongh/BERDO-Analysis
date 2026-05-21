@@ -573,9 +573,15 @@ def _load_single_csv(file_path: Path) -> pd.DataFrame:
         df.loc[valid, "ghg_emissions"] / df.loc[valid, "gross_floor_area"]
     )
 
-    df["compliance_status"] = (
-        df["compliance_status"].astype(str).str.lower().str.strip()
-    )
+    if "compliance_status" in df.columns:
+        df["compliance_status"] = (
+            df["compliance_status"].astype(str).str.lower().str.strip()
+        )
+    else:
+        # Print available columns to logs so you can find the right name
+        import sys
+        print("compliance_status not found. Available columns:", list(df.columns), file=sys.stderr)
+        df["compliance_status"] = "unknown"
     return df
 
 
