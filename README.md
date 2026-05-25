@@ -81,7 +81,7 @@ BERDO compliance is not only an energy performance challenge. It is also a data 
 - **223 buildings** remain in pending revisions; **116** are under the State Pathway
 - **Multifamily housing** is the largest building category, with more than 2,000 buildings
 - Buildings with high Site EUI likely require deeper performance review; buildings with missing data likely require reporting support, these are distinct intervention types
-- Natural gas usage appears across many submitted records, suggesting broad potential for electrification planning
+- Natural gas usage appears across many submitted records, suggesting potential for electrification planning
 - Preliminary location patterns suggest some neighborhoods have higher concentrations of non-submitted buildings, pointing to reporting gaps that may reflect capacity barriers rather than indifference
 
 ---
