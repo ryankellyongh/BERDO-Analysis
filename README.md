@@ -103,7 +103,7 @@ Analysis was conducted in Python following a structured workflow.
 
 **Data preparation:** Standardized column names, consolidated compliance labels, created separate datasets for complete performance records and missing-data analysis, cleaned reporting inconsistencies
 
-**Analysis performed:** Compliance distribution · Property type frequency · Average EUI by compliance status · High-priority building identification · Correlation analysis between building size and energy intensity · Missing data pattern analysis
+**Analysis performed:** Compliance distribution, Property type frequency, Average EUI by compliance status, High-priority building identification, Correlation analysis between building size and energy intensity, Missing data pattern analysis
 
 ---
 
