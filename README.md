@@ -162,4 +162,4 @@ Data Analytics Student — Northeastern University
 
 Focused on sustainability analytics, building performance, and using data to support climate policy and operational decision-making.
 
-[GitHub](https://github.com/ryankellyongh) · [LinkedIn]
+[GitHub](https://github.com/ryankellyongh) · [LinkedIn](https://linkedin.com/in/ryankelly10
