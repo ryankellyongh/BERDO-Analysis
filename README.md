@@ -2,7 +2,7 @@
 
 *Identifying Reporting Gaps, Energy Performance Risks, and Emissions Reduction Opportunities in Boston Buildings*
 
-Boston's Building Emissions Reduction and Disclosure Ordinance (BERDO 2.0) sets declining greenhouse gas emissions limits for large buildings through 2050 — but compliance is not just an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination problem. The buildings most in need of support are often not the highest energy users; they are the ones with missing property types, unreported energy data, or no record of submission at all.
+Boston's Building Emissions Reduction and Disclosure Ordinance (BERDO 2.0) sets declining greenhouse gas emissions limits for large buildings through 2050, but compliance is not just an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination problem. The buildings most in need of support are often not the highest energy users; they are the ones with missing property types, unreported energy data, or no record of submission at all.
 
 This project analyzes Boston's BERDO public reporting data to evaluate compliance patterns, building performance, and opportunities for targeted intervention — and includes a live screening tool that helps identify which buildings need attention first.
 
@@ -71,7 +71,7 @@ This tool is intended for planning and outreach purposes only. It does not const
 
 ## Key Takeaway
 
-BERDO compliance is not only an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination issue. The buildings most in need of support are not limited to those with high Site EUI — they also include buildings missing basic reporting information, especially property type and energy use data. Treating missing data as an early warning signal, rather than a data quality problem, is what distinguishes a triage tool from a compliance tracker.
+BERDO compliance is not only an energy performance challenge. It is also a data visibility, reporting capacity, and ownership coordination issue. The buildings most in need of support are not limited to those with high Site EUI, they also include buildings missing basic reporting information, especially property type and energy use data. Treating missing data as an early warning signal, rather than a data quality problem, is what distinguishes a triage tool from a compliance tracker.
 
 ---
 
