@@ -1213,7 +1213,7 @@ with tab_address:
                 "Site EUI", "GHG Intensity (kgCO2e/sqft)",
                 "Compliance Status", "Priority Level", "Priority Score", "Reasons",
             ]
-            st.dataframe(result[display_cols], use_container_width=True)
+            st.dataframe(result[display_cols], use_container_width=True, hide_index=True)
 
             top = result.iloc[0]
             col1, col2 = st.columns(2)
