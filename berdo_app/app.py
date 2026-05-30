@@ -1278,7 +1278,7 @@ with tab_portfolio:
     )
     owner_input = st.text_input(
         "Enter property owner name",
-        placeholder="Example: Boston Properties",
+        placeholder="Example: City of Boston",
         key="owner_input",
     )
 
