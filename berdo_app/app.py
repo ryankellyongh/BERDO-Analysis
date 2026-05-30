@@ -1295,7 +1295,7 @@ with tab_portfolio:
                 "Gross Floor Area", "Site EUI", "GHG Intensity (kgCO2e/sqft)",
                 "Compliance Status", "Priority Level",
             ]
-            st.dataframe(portfolio_result[display_cols], use_container_width=True)
+            st.dataframe(portfolio_result[display_cols], use_container_width=True, hide_index=True)
 
             if len(portfolio_result) == 1:
                 st.info(
