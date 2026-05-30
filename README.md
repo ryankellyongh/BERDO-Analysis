@@ -30,9 +30,9 @@ A sidebar year selector lets users switch between reporting years (2021–2025).
 
 ### Who it's for
 
-City sustainability staff, outreach coordinators, community organizations, and retrofit planners who need to triage a large portfolio of buildings and focus limited resources where they matter most.
+City sustainability staff, outreach coordinators, community organizations, and retrofit planners who need to triage a large portfolio of buildings and focus limited resources where they matter most, and building owners who want to understand their compliance exposure, estimate fine risk, and evaluate whether grouping buildings into a BERDO Building Portfolio could reduce their obligations.
 
-This tool is designed for screening and prioritization, not official compliance determination. Results are intended to guide outreach, technical assistance, and retrofit planning conversations.
+This tool is designed for screening and prioritization, not official compliance determination. Results are intended to guide outreach, technical assistance, retrofit planning conversations, and preliminary portfolio strategy.
 
 ### Why it exists
 
