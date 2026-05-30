@@ -954,7 +954,7 @@ def render_portfolio_section(buildings_df, selected_year, elec_share, all_years,
 
     if breakdown_rows:
         breakdown_df = pd.DataFrame(breakdown_rows)
-        st.dataframe(breakdown_df, use_container_width=True)
+        st.dataframe(breakdown_df, use_container_width=True, hide_index=True)
         st.caption(
             "Gap (MT) = metric tons CO₂e above (+) or below (−) the period limit. "
             "Negative = surplus that can offset other buildings in the portfolio."
