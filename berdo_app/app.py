@@ -54,15 +54,6 @@ PROJECTED_GRID_EF = {
 # Representative year for each compliance period (midpoint, or period start for 2050+)
 PERIOD_REPRESENTATIVE_YEARS = [2027, 2032, 2037, 2042, 2047, 2050]
 
-RPS_CLASS_I = {
-    2022: 0.20, 2023: 0.22, 2024: 0.24, 2025: 0.27, 2026: 0.30,
-    2027: 0.33, 2028: 0.36, 2029: 0.39, 2030: 0.40, 2031: 0.41,
-    2032: 0.42, 2033: 0.43, 2034: 0.44, 2035: 0.45, 2036: 0.46,
-    2037: 0.47, 2038: 0.48, 2039: 0.49, 2040: 0.50, 2041: 0.51,
-    2042: 0.52, 2043: 0.53, 2044: 0.54, 2045: 0.55, 2046: 0.56,
-    2047: 0.57, 2048: 0.58, 2049: 0.59, 2050: 0.60,
-}
-
 # ---------------------------------------------------------------------------
 # Mapping from Energy Star Portfolio Manager property types → BERDO categories
 # ---------------------------------------------------------------------------
@@ -155,22 +146,17 @@ def project_ghg_intensities(ghg_intensity, elec_share, base_year):
     Returns a list of 6 projected intensities, one per COMPLIANCE_PERIODS entry.
     Falls back to the base_year EF if base_year is not in PROJECTED_GRID_EF.
     """
-    raw_base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
-    if raw_base_ef == 0:
+    base_ef = PROJECTED_GRID_EF.get(base_year, PROJECTED_GRID_EF[2025])
+    if base_ef == 0:
         return [ghg_intensity] * len(COMPLIANCE_PERIODS)
-
-    base_rps = RPS_CLASS_I.get(base_year, RPS_CLASS_I[2025])
-    effective_base_ef = raw_base_ef * (1.0 - base_rps)
 
     elec_intensity   = ghg_intensity * elec_share
     fossil_intensity = ghg_intensity * (1.0 - elec_share)
 
     projected = []
     for yr in PERIOD_REPRESENTATIVE_YEARS:
-        future_raw_ef = PROJECTED_GRID_EF.get(yr, raw_base_ef)
-        future_rps    = RPS_CLASS_I.get(yr, base_rps)
-        effective_future_ef = future_raw_ef * (1.0 - future_rps)
-        future_elec = elec_intensity * (effective_future_ef / effective_base_ef)
+        future_ef = PROJECTED_GRID_EF.get(yr, base_ef)
+        future_elec = elec_intensity * (future_ef / base_ef)
         projected.append(round(fossil_intensity + future_elec, 3))
     return projected
 
@@ -644,6 +630,346 @@ def lookup_building_priority(df, address):
 
 
 # ---------------------------------------------------------------------------
+# Owner portfolio lookup
+# ---------------------------------------------------------------------------
+def lookup_owner_portfolio(df, owner_name):
+    """
+    Returns a DataFrame of all buildings matching the given owner name
+    (case-insensitive substring match), enriched with the same fields
+    used by the single-building lookup.
+    """
+    import re
+    owner_clean = owner_name.strip()
+    matches = df[
+        df["Property Owner Name"].astype(str).str.contains(
+            re.escape(owner_clean), case=False, na=False
+        )
+    ]
+    if matches.empty:
+        return None
+
+    median_eui = df["site_eui"].median()
+    results = []
+    for _, row in matches.iterrows():
+        priority, score, reasons = assign_priority(row, median_eui)
+        results.append({
+            "Building Address":            row.get("Building Address"),
+            "Property Owner Name":         row.get("Property Owner Name"),
+            "Property Type":               row.get("property_type"),
+            "Gross Floor Area":            row.get("gross_floor_area"),
+            "Site EUI":                    row.get("site_eui"),
+            "GHG Intensity (kgCO2e/sqft)": row.get("ghg_intensity_kgco2e_sqft"),
+            "GHG Emissions (kgCO2e)":      row.get("ghg_emissions"),
+            "Compliance Status":           row.get("compliance_status"),
+            "Priority Level":              priority,
+            "Priority Score":              score,
+            "Reasons":                     "; ".join(reasons),
+        })
+    return pd.DataFrame(results)
+
+
+def calculate_blended_standard(buildings_df):
+    """
+    Calculates the area-weighted blended emissions standard for a portfolio,
+    one value per compliance period.
+
+    Returns a list of 6 floats (kg CO2e/sqft/yr), or None if the portfolio
+    cannot be evaluated (missing sqft or unmappable property types).
+    """
+    total_sqft = 0.0
+    weighted_limits = [0.0] * len(COMPLIANCE_PERIODS)
+
+    for _, row in buildings_df.iterrows():
+        sqft = pd.to_numeric(row.get("Gross Floor Area"), errors="coerce")
+        berdo_cat = map_property_type(row.get("Property Type"))
+        if pd.isna(sqft) or sqft <= 0 or berdo_cat is None:
+            continue
+        limits = BERDO_STANDARDS[berdo_cat]
+        total_sqft += sqft
+        for i, lim in enumerate(limits):
+            weighted_limits[i] += lim * sqft
+
+    if total_sqft == 0:
+        return None
+
+    return [round(wl / total_sqft, 4) for wl in weighted_limits]
+
+
+# ---------------------------------------------------------------------------
+# Portfolio compliance section
+# ---------------------------------------------------------------------------
+def render_portfolio_section(buildings_df, selected_year, elec_share, all_years, show_yoy):
+    """
+    Renders BERDO compliance analysis for a multi-building owner portfolio.
+    Shows portfolio-level blended standard, aggregate gap, fine exposure,
+    and a per-building surplus/deficit breakdown table.
+    """
+    st.subheader("Portfolio Compliance Analysis")
+
+    # --- Filter to buildings with usable data ---
+    valid = buildings_df[
+        buildings_df["GHG Emissions (kgCO2e)"].notna() &
+        buildings_df["Gross Floor Area"].notna() &
+        (pd.to_numeric(buildings_df["Gross Floor Area"], errors="coerce") > 0)
+    ].copy()
+
+    total_buildings = len(buildings_df)
+    usable_buildings = len(valid)
+
+    skipped = total_buildings - usable_buildings
+    if skipped > 0:
+        st.warning(
+            f"{skipped} of {total_buildings} building(s) excluded from portfolio calculations "
+            "due to missing GHG emissions or floor area data."
+        )
+
+    if valid.empty:
+        st.error("No buildings with sufficient data to calculate portfolio compliance.")
+        return
+
+    # --- Portfolio-level aggregates ---
+    valid["Gross Floor Area"] = pd.to_numeric(valid["Gross Floor Area"], errors="coerce")
+    valid["GHG Emissions (kgCO2e)"] = pd.to_numeric(valid["GHG Emissions (kgCO2e)"], errors="coerce")
+
+    total_sqft      = valid["Gross Floor Area"].sum()
+    total_emissions = valid["GHG Emissions (kgCO2e)"].sum()
+    portfolio_intensity = round(total_emissions / total_sqft, 4)
+
+    blended_limits = calculate_blended_standard(valid)
+    if blended_limits is None:
+        st.error(
+            "Could not calculate a blended standard — check that property types "
+            "are mapped for all buildings in the portfolio."
+        )
+        return
+
+    # --- Summary header metrics ---
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Buildings in portfolio", usable_buildings)
+    c2.metric("Total floor area", f"{int(total_sqft):,} sq ft")
+    c3.metric("Total emissions", f"{int(total_emissions / 1000):,} metric tons CO₂e")
+    c4.metric("Portfolio GHG intensity", f"{portfolio_intensity:.3f} kg/sf/yr")
+
+    st.caption(
+        "Portfolio intensity = total GHG emissions ÷ total floor area. "
+        "Blended standard = area-weighted average of per-building BERDO limits."
+    )
+
+    # --- Vacancy warning ---
+    # Flag buildings that look vacant (zero emissions + zero EUI)
+    zero_emission = valid[
+        (valid["GHG Emissions (kgCO2e)"] == 0) &
+        (pd.to_numeric(valid["Site EUI"], errors="coerce").fillna(0) == 0)
+    ]
+    if not zero_emission.empty:
+        addresses = ", ".join(zero_emission["Building Address"].astype(str).tolist())
+        st.warning(
+            f"⚠️ Possible vacant building(s) detected: **{addresses}**. "
+            "BERDO Building Portfolios cannot include vacant buildings — "
+            "verify before submitting a portfolio application."
+        )
+
+    st.markdown("---")
+
+    # --- Metric cards: first 3 compliance periods ---
+    st.markdown("#### Portfolio vs. Blended Standard")
+    cols = st.columns(3)
+    period_labels = ["2025–2029", "2030–2034", "2035–2039"]
+    for i, col in enumerate(cols):
+        limit = blended_limits[i]
+        gap   = round(portfolio_intensity - limit, 4)
+        compliant = gap <= 0
+        excess_tons = 0.0 if compliant else round(gap * total_sqft / 1000, 1)
+        fine = 0.0 if compliant else round(excess_tons * ACP_RATE, 0)
+        with col:
+            status   = "✅ Compliant" if compliant else "⚠️ Non-compliant"
+            fine_str = "$0" if compliant else f"${fine:,.0f}/yr"
+            gap_delta = (
+                f"−{abs(gap):.3f} kg under limit"
+                if compliant
+                else f"+{gap:.3f} kg over limit"
+            )
+            st.metric(
+                label=f"{period_labels[i]}  |  {status}",
+                value=fine_str,
+                delta=gap_delta,
+                delta_color="normal" if compliant else "inverse",
+            )
+            if not compliant:
+                st.caption(
+                    f"Blended limit: {limit:.3f} kg · "
+                    f"{excess_tons:,.0f} excess metric tons"
+                )
+
+    st.markdown("---")
+
+    # --- Compliance chart ---
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=COMPLIANCE_PERIODS,
+        y=blended_limits,
+        name="Blended BERDO limit",
+        marker_color="#3266ad",
+        text=[f"{v:.3f} kg" for v in blended_limits],
+        textposition="outside",
+        textfont=dict(size=11),
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=COMPLIANCE_PERIODS,
+        y=[portfolio_intensity] * len(COMPLIANCE_PERIODS),
+        name="Portfolio intensity (no change)",
+        mode="lines",
+        line=dict(color="#E24B4A", width=2, dash="dash"),
+    ))
+
+    # Grid decarbonization overlay
+    if elec_share is not None:
+        projected = project_ghg_intensities(
+            portfolio_intensity, elec_share,
+            selected_year if selected_year in PROJECTED_GRID_EF else 2025,
+        )
+        fig.add_trace(go.Scatter(
+            x=COMPLIANCE_PERIODS,
+            y=projected,
+            name="Grid decarbonization scenario",
+            mode="lines+markers",
+            line=dict(color="#2ECC71", width=2),
+            marker=dict(size=7, symbol="diamond"),
+        ))
+
+    # Fine exposure line
+    portfolio_fines = []
+    for i, limit in enumerate(blended_limits):
+        gap = portfolio_intensity - limit
+        excess_tons = max(gap * total_sqft / 1000, 0)
+        portfolio_fines.append(round(excess_tons * ACP_RATE, 0))
+
+    fig.add_trace(go.Scatter(
+        x=COMPLIANCE_PERIODS,
+        y=portfolio_fines,
+        name="Annual ACP fine — portfolio (USD)",
+        mode="lines+markers",
+        yaxis="y2",
+        line=dict(color="#BA7517", width=1.5, dash="dot"),
+        marker=dict(size=6),
+        visible="legendonly",
+    ))
+
+    y_max = max(max(blended_limits), portfolio_intensity) * 1.3
+
+    fig.update_layout(
+        xaxis_title="Compliance period",
+        yaxis=dict(title="kg CO₂e / sf / yr", range=[0, y_max]),
+        yaxis2=dict(
+            title="Annual ACP fine (USD)",
+            overlaying="y",
+            side="right",
+            showgrid=False,
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        height=400,
+        margin=dict(t=40, b=40, l=60, r=60),
+        bargap=0.35,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(gridcolor="rgba(128,128,128,0.12)")
+
+    st.plotly_chart(fig, use_container_width=True, key="portfolio_compliance_chart")
+
+    # --- Fine exposure summary ---
+    non_compliant = [
+        (i, blended_limits[i])
+        for i in range(len(COMPLIANCE_PERIODS))
+        if portfolio_intensity > blended_limits[i]
+    ]
+    if non_compliant:
+        total_5yr = sum(
+            round(max(portfolio_intensity - lim, 0) * total_sqft / 1000, 1) * ACP_RATE * 5
+            for _, lim in non_compliant
+        )
+        st.info(
+            f"**Conservative scenario:** if no emissions reductions are made, this portfolio "
+            f"faces an estimated **${total_5yr:,.0f}** in cumulative ACP payments across "
+            f"{len(non_compliant)} non-compliant period(s) (annual fine × 5 years per period)."
+        )
+    else:
+        st.success("This portfolio is on track to comply in all periods under current emissions.")
+
+    st.caption(
+        "Blended standard per BERDO 2.0: area-weighted average of each building's sector limit. "
+        "ACP = Alternative Compliance Payment at $234/metric ton CO₂e over the limit. "
+        "Not an official City of Boston compliance determination."
+    )
+
+    st.markdown("---")
+
+    # --- Per-building surplus/deficit table ---
+    st.markdown("#### Per-Building Surplus / Deficit")
+    st.caption(
+        "Shows each building's individual gap against its own sector limit. "
+        "Buildings with a surplus can offset those with a deficit at the portfolio level."
+    )
+
+    breakdown_rows = []
+    for _, row in valid.iterrows():
+        sqft      = pd.to_numeric(row["Gross Floor Area"], errors="coerce")
+        emissions = pd.to_numeric(row["GHG Emissions (kgCO2e)"], errors="coerce")
+        intensity = pd.to_numeric(row["GHG Intensity (kgCO2e/sqft)"], errors="coerce")
+        berdo_cat = map_property_type(row.get("Property Type"))
+
+        if pd.isna(sqft) or pd.isna(intensity) or berdo_cat is None:
+            continue
+
+        # Use first non-compliant period limit for the current window (2025–29)
+        limit_2025 = BERDO_STANDARDS[berdo_cat][0]
+        limit_2030 = BERDO_STANDARDS[berdo_cat][1]
+        limit_2035 = BERDO_STANDARDS[berdo_cat][2]
+
+        def _gap_tons(lim):
+            gap = intensity - lim
+            return round(gap * sqft / 1000, 1)
+
+        def _status(lim):
+            return "✅" if intensity <= lim else "⚠️"
+
+        breakdown_rows.append({
+            "Address":          row["Building Address"],
+            "Type":             berdo_cat,
+            "Sq Ft":            f"{int(sqft):,}",
+            "GHG (kg/sf/yr)":   round(intensity, 3),
+            "2025 Limit":       limit_2025,
+            "2025 Gap (MT)":    _gap_tons(limit_2025),
+            "2025":             _status(limit_2025),
+            "2030 Limit":       limit_2030,
+            "2030 Gap (MT)":    _gap_tons(limit_2030),
+            "2030":             _status(limit_2030),
+            "2035 Limit":       limit_2035,
+            "2035 Gap (MT)":    _gap_tons(limit_2035),
+            "2035":             _status(limit_2035),
+        })
+
+    if breakdown_rows:
+        breakdown_df = pd.DataFrame(breakdown_rows)
+        st.dataframe(breakdown_df, use_container_width=True)
+        st.caption(
+            "Gap (MT) = metric tons CO₂e above (+) or below (−) the period limit. "
+            "Negative = surplus that can offset other buildings in the portfolio."
+        )
+
+    # --- Application deadline callout ---
+    st.info(
+        "📅 **Portfolio application deadline: September 1, 2026** — to apply the Building "
+        "Portfolio compliance pathway to your 2025 emissions reporting. "
+        "All buildings must have the same owner and no vacant properties may be included. "
+        "Approval from the BERDO Review Board is required."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Year-over-year trend chart
 # ---------------------------------------------------------------------------
 def render_yoy_trend(address, all_years: dict[int, pd.DataFrame]):
@@ -827,15 +1153,11 @@ if show_grid_decarb:
         ),
     )
     elec_share = elec_share_pct / 100.0
-    base_raw_ef = PROJECTED_GRID_EF.get(selected_year, PROJECTED_GRID_EF[2025])
-    base_rps    = RPS_CLASS_I.get(selected_year, RPS_CLASS_I[2025])
-    eff_base_ef = round(base_raw_ef * (1.0 - base_rps), 1)
-    eff_2050_ef = round(PROJECTED_GRID_EF[2050] * (1.0 - RPS_CLASS_I[2050]), 1)
+    base_ef = PROJECTED_GRID_EF.get(selected_year, PROJECTED_GRID_EF[2025])
     st.sidebar.caption(
-        f"Effective grid EF ({selected_year}): **{eff_base_ef} kg/MWh** "
-        f"({base_raw_ef} × (1 − {int(base_rps*100)}%) RPS). "
-        f"Effective EF at 2050: **{eff_2050_ef} kg/MWh** "
-        f"({round((1 - eff_2050_ef / eff_base_ef) * 100)}% cleaner)."
+        f"Base year grid EF ({selected_year}): **{base_ef} kg/MWh** "
+        f"(Appendix B). Projected EF at 2050: **{PROJECTED_GRID_EF[2050]} kg/MWh** "
+        f"({round((1 - PROJECTED_GRID_EF[2050] / base_ef) * 100)}% cleaner)."
     )
 else:
     elec_share = None
@@ -861,43 +1183,49 @@ else:
         "It is not an official City of Boston BERDO compliance determination."
     )
 
-address_input = st.text_input(
-    "Enter building address",
-    placeholder="Example: 1047 Commonwealth Ave"
-)
+tab_address, tab_portfolio = st.tabs(["Address Lookup", "Owner Portfolio"])
 
-if address_input:
-    result = lookup_building_priority(df_full, address_input)
+# ---------------------------------------------------------------------------
+# Tab 1 — single address lookup (unchanged behaviour)
+# ---------------------------------------------------------------------------
+with tab_address:
+    address_input = st.text_input(
+        "Enter building address",
+        placeholder="Example: 1047 Commonwealth Ave"
+    )
 
-    if result is None:
-        st.warning("No matching address found in the dataset.")
-    else:
-        result["Site EUI"] = result["Site EUI"].round(1)
-        result["GHG Intensity (kgCO2e/sqft)"] = (
-            pd.to_numeric(result["GHG Intensity (kgCO2e/sqft)"], errors="coerce")
-            .round(3)
-        )
+    if address_input:
+        result = lookup_building_priority(df_full, address_input)
 
-        st.subheader("Priority Result")
+        if result is None:
+            st.warning("No matching address found in the dataset.")
+        else:
+            result["Site EUI"] = result["Site EUI"].round(1)
+            result["GHG Intensity (kgCO2e/sqft)"] = (
+                pd.to_numeric(result["GHG Intensity (kgCO2e/sqft)"], errors="coerce")
+                .round(3)
+            )
 
-        display_cols = [
-            "Building Address", "Property Owner Name", "Property Type",
-            "Site EUI", "GHG Intensity (kgCO2e/sqft)",
-            "Compliance Status", "Priority Level", "Priority Score", "Reasons",
-        ]
-        st.dataframe(result[display_cols], use_container_width=True, hide_index=True)
+            st.subheader("Priority Result")
 
-        top = result.iloc[0]
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Priority Level", top["Priority Level"])
-        with col2:
-            st.metric("Priority Score", int(top["Priority Score"]))
+            display_cols = [
+                "Building Address", "Property Owner Name", "Property Type",
+                "Site EUI", "GHG Intensity (kgCO2e/sqft)",
+                "Compliance Status", "Priority Level", "Priority Score", "Reasons",
+            ]
+            st.dataframe(result[display_cols], use_container_width=True)
 
-        st.write("**Reasons:**", top["Reasons"])
+            top = result.iloc[0]
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Priority Level", top["Priority Level"])
+            with col2:
+                st.metric("Priority Score", int(top["Priority Score"]))
 
-        with st.expander("What do these fields mean?"):
-            st.markdown("""
+            st.write("**Reasons:**", top["Reasons"])
+
+            with st.expander("What do these fields mean?"):
+                st.markdown("""
 **Compliance Status**
 - **Submitted**: The building owner reported energy and emissions data to the City of Boston for the previous calendar year.
 - **Not submitted**: No data was reported. Buildings required to report under BERDO face fines of $300/day (buildings over 35,000 sq ft) for missing the May 15 annual deadline.
@@ -912,29 +1240,75 @@ if address_input:
 - A screening score (0–8) used to flag buildings that may need outreach, reporting support, or retrofit planning. Higher scores indicate more urgent attention.
 """)
 
-        st.markdown("---")
-
-        # --- Year-over-year trend (multi-year mode only) ---
-        prior_ghg, prior_label = None, None
-        if show_yoy and multi_year_mode:
-            prior_ghg, prior_label = render_yoy_trend(address_input, all_years)
             st.markdown("---")
 
-        # --- Grid decarbonization projection ---
-        projected_intensities = None
-        if show_grid_decarb and elec_share is not None:
-            ghg_val = top.get("GHG Intensity (kgCO2e/sqft)")
-            if pd.notna(ghg_val) and ghg_val > 0:
-                projected_intensities = project_ghg_intensities(
-                    ghg_intensity=float(ghg_val),
-                    elec_share=elec_share,
-                    base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
-                )
+            # --- Year-over-year trend (multi-year mode only) ---
+            prior_ghg, prior_label = None, None
+            if show_yoy and multi_year_mode:
+                prior_ghg, prior_label = render_yoy_trend(address_input, all_years)
+                st.markdown("---")
 
-        render_compliance_section(
-            top,
-            prior_year_ghg_intensity=prior_ghg,
-            prior_year_label=prior_label,
-            projected_intensities=projected_intensities,
-            base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
-        )
+            # --- Grid decarbonization projection ---
+            projected_intensities = None
+            if show_grid_decarb and elec_share is not None:
+                ghg_val = top.get("GHG Intensity (kgCO2e/sqft)")
+                if pd.notna(ghg_val) and ghg_val > 0:
+                    projected_intensities = project_ghg_intensities(
+                        ghg_intensity=float(ghg_val),
+                        elec_share=elec_share,
+                        base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
+                    )
+
+            render_compliance_section(
+                top,
+                prior_year_ghg_intensity=prior_ghg,
+                prior_year_label=prior_label,
+                projected_intensities=projected_intensities,
+                base_year=selected_year if selected_year in PROJECTED_GRID_EF else 2025,
+            )
+
+# ---------------------------------------------------------------------------
+# Tab 2 — owner portfolio lookup
+# ---------------------------------------------------------------------------
+with tab_portfolio:
+    st.write(
+        "Enter a property owner name to group all their buildings into a BERDO "
+        "Building Portfolio and see combined compliance exposure under the blended "
+        "emissions standard."
+    )
+    owner_input = st.text_input(
+        "Enter property owner name",
+        placeholder="Example: Boston Properties",
+        key="owner_input",
+    )
+
+    if owner_input:
+        portfolio_result = lookup_owner_portfolio(df_full, owner_input)
+
+        if portfolio_result is None:
+            st.warning("No buildings found for that owner name in the dataset.")
+        else:
+            st.subheader(f"Buildings found: {len(portfolio_result)}")
+
+            display_cols = [
+                "Building Address", "Property Owner Name", "Property Type",
+                "Gross Floor Area", "Site EUI", "GHG Intensity (kgCO2e/sqft)",
+                "Compliance Status", "Priority Level",
+            ]
+            st.dataframe(portfolio_result[display_cols], use_container_width=True)
+
+            if len(portfolio_result) == 1:
+                st.info(
+                    "Only one building found for this owner. "
+                    "A Building Portfolio requires multiple buildings — "
+                    "use the Address Lookup tab for single-building analysis."
+                )
+            else:
+                st.markdown("---")
+                render_portfolio_section(
+                    portfolio_result,
+                    selected_year=selected_year,
+                    elec_share=elec_share if show_grid_decarb else None,
+                    all_years=all_years,
+                    show_yoy=show_yoy,
+                )
