@@ -716,15 +716,23 @@ def render_portfolio_section(buildings_df, selected_year, elec_share, all_years,
         missing_sqft = pd.isna(sqft) or sqft <= 0
 
         if missing_ghg or missing_sqft:
-            if missing_ghg and missing_sqft:
-                reason = "Missing GHG emissions and floor area"
+            status = str(row.get("Compliance Status", "")).strip().lower()
+            if status == "state":
+                reason = "State-owned property — exempt from BERDO reporting"
+            elif missing_ghg and missing_sqft:
+                if status == "not submitted":
+                    reason = "Did not report — no GHG data or floor area submitted"
+                elif status == "pending revisions":
+                    reason = "Pending revisions — GHG data and floor area incomplete"
+                else:
+                    reason = "Missing GHG emissions and floor area"
             elif missing_ghg:
-                status = str(row.get("Compliance Status", "")).strip().lower()
-                reason = (
-                    "Did not report — no GHG data submitted"
-                    if status == "not submitted"
-                    else "Missing GHG emissions data"
-                )
+                if status == "not submitted":
+                    reason = "Did not report — no GHG data submitted"
+                elif status == "pending revisions":
+                    reason = "Pending revisions — GHG data incomplete"
+                else:
+                    reason = "Missing GHG emissions data"
             else:
                 reason = "Missing floor area"
             excluded_rows.append({
@@ -1046,15 +1054,24 @@ marked "Did not report" in the excluded table represent additional unknown expos
         not_reported = sum(
             1 for r in excluded_rows if "did not report" in r["Exclusion Reason"].lower()
         )
-        expander_label = (
-            f"Excluded buildings ({skipped})"
-            + (f" — {not_reported} did not report" if not_reported else "")
+        state_exempt = sum(
+            1 for r in excluded_rows if "state-owned" in r["Exclusion Reason"].lower()
         )
-        with st.expander(expander_label):
+        label_parts = [f"Excluded buildings ({skipped})"]
+        if state_exempt:
+            label_parts.append(f"{state_exempt} state-exempt")
+        if not_reported:
+            label_parts.append(f"{not_reported} did not report")
+        expander_label = " — ".join(label_parts)
+
+        auto_expand = (skipped / total_buildings) > 0.3
+        with st.expander(expander_label, expanded=auto_expand):
             st.caption(
                 "These buildings are not included in the portfolio calculation. "
-                "'Did not report' means no energy data was submitted to the City of Boston — "
-                "their emissions are unknown and not reflected above."
+                "**State-owned** properties are exempt from BERDO and excluded by default. "
+                "**Did not report** means no energy data was submitted to the City of Boston — "
+                "their emissions are unknown and not reflected above. "
+                "**Pending revisions** means data was submitted but flagged for corrections."
             )
             st.dataframe(
                 pd.DataFrame(excluded_rows),
