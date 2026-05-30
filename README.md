@@ -36,7 +36,7 @@ This tool is designed for screening and prioritization, not official compliance 
 
 ### Why it exists
 
-The City of Boston's official BERDO Emissions Calculator projects compliance for a single building given specific retrofit interventions. It is a depth tool. This is a breadth tool, built to answer a different question: *which buildings should we focus on first?*
+The City of Boston's official BERDO Emissions Calculator projects compliance for a single building given specific retrofit interventions. It is a depth tool. This is a breadth tool, built to answer a different question: *which buildings should we focus on first? and how does grouping buildings into a portfolio change the compliance picture?*
 
 No publicly available City tool currently provides priority scoring, multi-year trend analysis, or outreach triage across the full BERDO portfolio.
 
